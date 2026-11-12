@@ -1,4 +1,4 @@
-import { copyFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -19,7 +19,14 @@ const spaFallback = (): Plugin => {
       outDir = resolve(config.root, config.build.outDir);
     },
     closeBundle() {
-      copyFileSync(resolve(outDir, 'index.html'), resolve(outDir, '404.html'));
+      const index = resolve(outDir, 'index.html');
+      copyFileSync(index, resolve(outDir, '404.html'));
+      // Real files for the known pages, so they answer 200 (not 404) for
+      // search engines and link previews; main.tsx picks the page by path.
+      for (const page of ['about', 'privacy']) {
+        mkdirSync(resolve(outDir, page), { recursive: true });
+        copyFileSync(index, resolve(outDir, page, 'index.html'));
+      }
     },
   };
 };
