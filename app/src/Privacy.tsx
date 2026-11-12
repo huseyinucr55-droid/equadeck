@@ -1,11 +1,12 @@
 import { APP_NAME } from './brand';
+import { to } from './lib/paths';
 
 // Placeholder privacy notice for the guest-only version. Review before launch
 // (replica-launch adds the real legal pages once accounts exist).
 export default function Privacy() {
   return (
     <main className="mx-auto max-w-2xl px-4 py-10 text-base text-fg">
-      <a href="/" className="text-sm text-accent underline">← Back to the editor</a>
+      <a href={to('/')} className="text-sm text-accent underline">← Back to the editor</a>
       <h1 className="mt-6 text-xl font-bold">Privacy</h1>
       <p className="mt-4 text-muted">Draft notice, {new Date().getFullYear()}.</p>
       <div className="mt-6 space-y-4">

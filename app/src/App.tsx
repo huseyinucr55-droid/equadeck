@@ -20,6 +20,7 @@ import { download, preloadPdf, svgBlob, toPdf, toPng } from './lib/export';
 // (transient user activation, ~5 s in Chrome). Past this, ask for a click.
 const AUTO_DOWNLOAD_MS = 3000;
 import { APP_NAME } from './brand';
+import { to } from './lib/paths';
 
 const DRAFT_KEY = 'lx.draft.v1';
 const SEED = 'f(x) = \\int_{-\\infty}^{\\infty} \\hat{f}(\\xi)\\, e^{2\\pi i \\xi x}\\, d\\xi';
@@ -376,7 +377,10 @@ export default function App() {
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-[var(--lx-layout-max)] gap-4 px-4 py-4 text-xs text-muted lg:px-6">
           <span>Rendered with MathJax</span>
-          <a href="/privacy" className="underline hover:text-fg">
+          <a href={to('/about')} className="underline hover:text-fg">
+            About
+          </a>
+          <a href={to('/privacy')} className="underline hover:text-fg">
             Privacy
           </a>
         </div>

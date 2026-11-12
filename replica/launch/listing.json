@@ -1,0 +1,17 @@
+{
+  "_about": "Store listing for Equadeck. It's a web app today; this is ready for when it ships as an installable app (PWA wrapper on Google Play, or an iOS/macOS build). Checked by listing.py. avoid = the original's names (from brand.json).",
+  "avoid": ["Lagrida", "latexeditor.lagrida", "Equation Editor by Lagrida"],
+  "app_store": {
+    "name": "Equadeck: LaTeX Equations",
+    "subtitle": "Paste maths into your slides",
+    "promotional_text": "New: Copy for Word. Paste an editable equation into Word or PowerPoint, not a picture. Free, no account.",
+    "description": "Equadeck turns LaTeX into crisp equations for your slides and documents.\n\nType LaTeX or tap symbols, watch the equation appear as you go, then paste it where you need it.\n\nMade for slides and documents:\n- Copy for Word and PowerPoint: pastes as an equation you can still edit\n- Save as PNG (up to 4x), SVG or PDF, in dark ink even in dark mode\n- See which LaTeX packages your equation needs, and copy it with them\n\nQuick to write:\n- Autocomplete for about 200 commands\n- A symbol palette you can search\n- Matrix builder, examples and reference sheets, including chemistry and physics notation\n\nNo strings:\n- Free, with no account and no ads\n- Save up to 50 equations on your device\n- Nothing you type leaves your device",
+    "keywords": "equation,math,formula,editor,notation,powerpoint,word,keynote,mathml,svg,pdf,chemistry,typeset",
+    "whats_new": "Copy for Word: paste an editable equation into Word or PowerPoint."
+  },
+  "google_play": {
+    "title": "Equadeck: LaTeX Equations",
+    "short_description": "Type LaTeX, then paste a crisp, editable equation into slides and documents.",
+    "full_description": "Equadeck turns LaTeX into crisp equations for your slides and documents.\n\nType LaTeX or tap symbols, watch the equation appear as you go, then paste it where you need it.\n\nMade for slides and documents:\n- Copy for Word and PowerPoint: pastes as an equation you can still edit\n- Save as PNG (up to 4x), SVG or PDF, in dark ink even in dark mode\n- See which LaTeX packages your equation needs, and copy it with them\n\nQuick to write:\n- Autocomplete for about 200 commands\n- A symbol palette you can search\n- Matrix builder, examples and reference sheets, including chemistry and physics notation\n\nNo strings:\n- Free, with no account and no ads\n- Save up to 50 equations on your device\n- Nothing you type leaves your device"
+  }
+}
