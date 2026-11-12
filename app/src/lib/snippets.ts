@@ -30,7 +30,7 @@ export type SaveResult = { ok: true; list: Snippet[] } | { ok: false; reason: st
 
 export function saveSnippet(code: string, fontSize: number, title: string | null): SaveResult {
   const list = listSnippets();
-  if (list.length >= LOCAL_LIMIT) return { ok: false, reason: `You can keep ${LOCAL_LIMIT} equations in this browser. Delete one to save another.` };
+  if (list.length >= LOCAL_LIMIT) return { ok: false, reason: `This browser holds up to ${LOCAL_LIMIT} equations. Delete one to make room.` };
   const s: Snippet = {
     id: crypto.randomUUID(),
     title: title?.trim() || null,

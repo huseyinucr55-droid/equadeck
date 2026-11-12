@@ -1,2 +1,2 @@
-// Placeholder name until /replica-brand picks the real one.
-export const APP_NAME = 'LaTeX Equation Editor';
+// The product name, chosen in /replica-brand (see replica/brand.md).
+export const APP_NAME = 'Equadeck';

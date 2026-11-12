@@ -60,7 +60,11 @@ function hideFromAT(svg: string): string {
 export type RenderResult ={ ok: true; svg: string } | { ok: false; message: string };
 
 /** Lines separated by \\ at the top level need \displaylines in display mode. */
-export function prepare(code: string): string {
+export function prepare(raw: string): string {
+  // Control characters (e.g. a form feed pasted from a PDF) crash MathJax's
+  // parser with an internal TypeError (BUG-008); treat them as spaces.
+  // eslint-disable-next-line no-control-regex
+  const code = raw.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, ' ');
   const hasBreak = /\\\\/.test(code);
   const hasEnv = /\\begin\s*\{/.test(code);
   return hasBreak && !hasEnv ? `\\displaylines{${code}}` : code;
@@ -75,7 +79,9 @@ export function render(code: string, display = true): RenderResult {
     const node = doc.convert(display ? prepare(code) : code, { display, em: 16, ex: 8, containerWidth: 1200 });
     return { ok: true, svg: hideFromAT(adaptor.innerHTML(node)) };
   } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
+    // TeX errors have useful messages ("Missing close brace"); anything else is
+    // an internal failure and its message means nothing to the user.
+    const message = e instanceof TexError ? e.message : 'Something in this equation could not be drawn';
     return { ok: false, message: message.replace(/\s+/g, ' ').trim() };
   }
 }

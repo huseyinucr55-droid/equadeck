@@ -132,7 +132,7 @@ export default function App() {
     try {
       const { blob, scale: used, clamped } = await toPng(el, scale);
       download(blob, 'equation.png');
-      say(clamped ? `Too large for this device, saved at ${used}×.` : 'PNG downloaded.');
+      say(clamped ? `Too large for this device, saved at ${used}×.` : 'Saved as PNG.');
     } catch (e) {
       say(e instanceof Error ? e.message : 'Export failed.');
     } finally {
@@ -149,7 +149,7 @@ export default function App() {
       const blob = await toPdf(el);
       if (performance.now() - started < AUTO_DOWNLOAD_MS) {
         download(blob, 'equation.pdf');
-        say('PDF downloaded.');
+        say('Saved as PDF.');
       } else {
         // Too slow for the browser to treat the save as part of the click (BUG-007).
         say('Your PDF is ready.', { label: 'Save PDF', run: () => download(blob, 'equation.pdf') }, 30_000);
@@ -165,13 +165,13 @@ export default function App() {
     const el = preview.current?.svg();
     if (!el) return;
     download(svgBlob(el), 'equation.svg');
-    say('SVG downloaded.');
+    say('Saved as SVG.');
   }
 
   async function copyLatex() {
     try {
       await navigator.clipboard.writeText(code);
-      say('LaTeX copied.');
+      say('LaTeX copied to your clipboard.');
     } catch {
       say('Copying is blocked in this browser.');
     }
@@ -182,7 +182,7 @@ export default function App() {
     try {
       const text = await mathml(code);
       await navigator.clipboard.writeText(text);
-      say('Copied. Paste into Word or PowerPoint to get an editable equation.');
+      say('Ready. Paste into Word or PowerPoint for an equation you can edit.');
     } catch {
       say('Could not copy for Word. Try Copy image instead.');
     }
@@ -367,7 +367,7 @@ export default function App() {
             onLoad={(s) => {
               editor.current?.replaceAll(s.code);
               if (s.settings?.font_size) setFontSize(s.settings.font_size);
-              say('Loaded. Undo brings back what you had.');
+              say('Opened. Undo brings your last equation back.');
             }}
           />
         </aside>
@@ -397,7 +397,7 @@ export default function App() {
           afterClose(() => {
             if (append && code.trim()) editor.current?.replaceAll(`${code} \\\\\n${ex}`);
             else editor.current?.replaceAll(ex);
-            say(append ? 'Example added below.' : 'Example loaded. Undo brings back what you had.');
+            say(append ? 'Example added below.' : 'Example in place. Undo brings your equation back.');
           })
         }
       />
@@ -413,7 +413,7 @@ export default function App() {
       />
       <Dialog open={panel === 'signin'} onClose={close} title="Sign in" footer={<Button size="sm" onClick={close}>Close</Button>}>
         <p className="text-sm text-muted">
-          Accounts are coming later. Until then, your current equation and anything you save are kept in this browser.
+          Accounts are on the way. Until then, your work and everything you save stay in this browser.
         </p>
       </Dialog>
       <Toast toast={toast} onDismiss={() => setToast(null)} />

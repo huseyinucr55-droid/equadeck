@@ -41,7 +41,7 @@ test.describe('F01 write an equation and download it', () => {
   test('F01-E1 empty input disables export', async ({ page }) => {
     await openApp(page);
     await setCode(page, '');
-    await expect(page.getByText('Your equation appears here.')).toBeVisible();
+    await expect(page.getByText('Start typing. Your equation shows up here.')).toBeVisible();
     for (const n of [/Download PNG/, /^SVG$/, /^PDF$/, /Copy image/, /Copy LaTeX/]) {
       await expect(page.getByRole('button', { name: n })).toBeDisabled();
     }
@@ -155,4 +155,13 @@ test.describe('F01 write an equation and download it', () => {
     await expect(page.getByText('8 to 96')).toBeVisible();
     await expect(previewBox(page)).toHaveCSS('font-size', '20px');
   });
+});
+
+// BUG-008: control characters (e.g. a form feed pasted from a PDF) crashed the
+// renderer and showed an internal JS error instead of the equation.
+test('F01-N5 pasted control characters are ignored, not shown as an internal error', async ({ page }) => {
+  await openApp(page);
+  await setCode(page, 'x = \f\u0008 \frac{1}{2}');
+  await waitRendered(page);
+  await expect(page.getByRole('alert')).toHaveCount(0);
 });

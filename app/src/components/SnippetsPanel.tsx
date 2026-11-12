@@ -64,7 +64,7 @@ export function SnippetsPanel({ code, fontSize, canSave, onLoad, notify }: Props
       )}
 
       {list.length === 0 ? (
-        <p className="mt-3 text-sm text-muted">Nothing saved yet. Press Save to keep the equation you’re working on.</p>
+        <p className="mt-3 text-sm text-muted">No saved equations yet. Press Save to keep this one for later.</p>
       ) : shown.length === 0 ? (
         <p className="mt-3 text-sm text-muted">No saved equation matches “{filter}”.</p>
       ) : (

@@ -134,3 +134,18 @@ Root-cause investigation (2026-11-12):
 - **Test suite:** `retries: 1`, so a single environment flake is reported as "flaky" (visible, not hidden); two failures in a row still fail the run.
 
 **Final status BUG-007 (2026-11-12): fixed.** Full suite twice with one retry: 102 runs, 100 passed first time, 2 passed on retry (both download cancellations, one PNG, one PDF: the known environment flake), 0 failed. Open bugs: 0.
+
+### BUG-008: Pasted control characters show an internal JavaScript error
+
+- Severity: S3
+- Flow / case: F01-N5 (new)
+- Screen: S01
+- Found: 2026-11-12, during the brand screenshots (a test string accidentally contained a form feed)
+
+Steps
+1. Paste LaTeX containing a control character (e.g. a form feed from a PDF): `x = <FF> \frac{1}{2}`.
+
+Expected: the equation renders; the stray character is ignored.
+Actual: the preview shows "Cannot read properties of null (reading '4')". MathJax's parser crashes with an internal TypeError, and its raw message reached the user.
+Evidence: replica/clone-screens/brand-*.png (first take); F01-N5 failed before the fix.
+Status: fixed in `src/lib/engine.ts`. `prepare()` turns control characters (except tab and newline) into spaces. Any non-TeX internal error now shows "Something in this equation could not be drawn" instead of JavaScript jargon. F01-N5 passes.

@@ -93,7 +93,7 @@ export const Preview = forwardRef<PreviewHandle, Props>(function Preview({ code,
         style={{ fontSize: `${fontSize}px` }}
       >
         {empty ? (
-          <p className="text-sm text-muted">Your equation appears here.</p>
+          <p className="text-sm text-muted">Start typing. Your equation shows up here.</p>
         ) : !ready ? (
           <p className="text-sm text-muted">Loading the renderer…</p>
         ) : (
@@ -111,7 +111,7 @@ export const Preview = forwardRef<PreviewHandle, Props>(function Preview({ code,
           <p role="alert" className="mx-4 mb-4 flex items-start gap-2 rounded-md bg-danger-soft px-4 py-3 text-sm text-danger">
             <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0" />
             <span>
-              {error}. {svg ? 'Showing the last version that worked.' : ''}
+              {error}. {svg ? 'Your last working version stays on screen.' : ''}
             </span>
           </p>
         )}

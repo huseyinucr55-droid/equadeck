@@ -51,7 +51,7 @@ export const Editor = forwardRef<EditorHandle, Props>(function Editor({ initialV
           StreamLanguage.define(stex),
           syntaxHighlighting(highlight),
           EditorView.lineWrapping,
-          placeholder('Type LaTeX, for example \\frac{a}{b}'),
+          placeholder('Type LaTeX here, like \\frac{a}{b}'),
           EditorView.contentAttributes.of({ 'aria-label': 'LaTeX source', spellcheck: 'false', autocapitalize: 'off' }),
           EditorView.updateListener.of((u) => {
             if (u.docChanged) cbs.current.onChange(u.state.doc.toString());

@@ -46,7 +46,7 @@ test.describe('F04 start from an example', () => {
     await axe(page, 'dialog[open]');
     await page.getByRole('button', { name: /Quadratic formula/ }).click();
     expect(await code(page)).toBe('x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}');
-    await expect(page.getByText('Example loaded')).toBeVisible();
+    await expect(page.getByText('Example in place')).toBeVisible();
   });
 
   test('F04-E1 Shift+click appends on a new line', async ({ page }) => {
@@ -121,7 +121,7 @@ test.describe('F09 sign in (no accounts yet)', () => {
     await openApp(page);
     await page.getByRole('button', { name: 'Sign in' }).click();
     const dialog = page.getByRole('dialog', { name: 'Sign in' });
-    await expect(dialog).toContainText('Accounts are coming later');
+    await expect(dialog).toContainText('Accounts are on the way');
     await axe(page, 'dialog[open]');
     await dialog.getByRole('button', { name: 'Close' }).first().click();
     await expect(dialog).toBeHidden();

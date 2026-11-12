@@ -1,0 +1,11 @@
+{
+  "_about": "Read by sweep.py (replica-brand), listing.py (replica-launch) and replica-deploy. avoid/domains/colors are the ORIGINAL's identity that must not appear in the clone.",
+  "name": "Equadeck",
+  "avoid": ["Lagrida", "latexeditor.lagrida", "Equation Editor by Lagrida"],
+  "domains": ["lagrida.com", "latexeditor.lagrida.com"],
+  "colors": ["#337ab7", "#2e6da4"],
+  "palette": {
+    "accent": "#0f766e",
+    "accent-dark-theme": "#2dd4bf"
+  }
+}

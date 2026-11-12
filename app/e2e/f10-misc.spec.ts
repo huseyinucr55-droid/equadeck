@@ -15,7 +15,7 @@ test('X-1 Copy LaTeX puts the code on the clipboard', async ({ page }) => {
   await openApp(page);
   await setCode(page, '\\sqrt{2}');
   await page.getByRole('button', { name: 'Copy LaTeX' }).click();
-  await expect(page.getByText('LaTeX copied.')).toBeVisible();
+  await expect(page.getByText('LaTeX copied to your clipboard.')).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('\\sqrt{2}');
 });
 

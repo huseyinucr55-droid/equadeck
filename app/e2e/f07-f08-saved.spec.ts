@@ -40,7 +40,7 @@ test.describe('F07 save an equation', () => {
     await setCode(page, 'new + one');
     await waitRendered(page);
     await saved(page).getByRole('button', { name: 'Save', exact: true }).click();
-    await expect(page.getByText(/keep 50 equations/)).toBeVisible();
+    await expect(page.getByText(/up to 50 equations/)).toBeVisible();
     await expect(saved(page).getByRole('heading')).toHaveText('Saved (50)');
   });
 
@@ -75,7 +75,7 @@ test.describe('F08 reopen a saved equation', () => {
     await saved(page).getByRole('button', { name: /^E = mc\^2/ }).click();
     expect(await code(page)).toBe('E = mc^2');
     await expect(sizeField(page)).toHaveValue('32');
-    await expect(page.getByText(/Loaded/)).toBeVisible();
+    await expect(page.getByText(/Opened/)).toBeVisible();
     await page.getByRole('button', { name: /^Undo/ }).click();
     expect(await code(page)).toBe(before);
   });
