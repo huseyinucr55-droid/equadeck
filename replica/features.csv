@@ -36,7 +36,7 @@ Lagrida brand and logo and icon sprites and example images,brand,could,yes,skip,
 PayPal donation for quota,monetisation,could,yes,skip,their arrangement; choose your own model in /replica-entrepreneur
 Existing users and their saved codes,data,could,yes,skip,data the app owns
 Copy for Word and PowerPoint (MathML on the clipboard),export,should,no,yes,fix F1: MathML as text; Word/PowerPoint paste it as an editable equation. e2e checks the clipboard; pasting into Office itself not verified here
-Packages-needed line and copy as LaTeX with usepackage,export,should,no,yes,fix F2: amsmath amssymb amscd xcolor[dvipsnames] cancel mhchem physics + warnings for MathJax-only commands, size commands and Unicode
+Packages-needed line and copy as LaTeX with usepackage,export,should,no,yes,"fix F2: amsmath amssymb amscd xcolor[dvipsnames] cancel mhchem physics + warnings for MathJax-only commands, size commands and Unicode"
 Export verified in Firefox and Safari,export,should,no,no,fix F3: Playwright WebKit + Firefox projects
 Instant repeat loads and offline use (service worker),editor,should,no,no,fix F4; also parity next step 3
 Automatic recent history,editor,could,no,no,fix F5 (thin evidence; cheap)

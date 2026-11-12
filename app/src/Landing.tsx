@@ -186,6 +186,9 @@ export default function Landing() {
           <a href={to('/privacy')} className="underline hover:text-fg">
             Privacy
           </a>
+          <a href={to('/terms')} className="underline hover:text-fg">
+            Terms
+          </a>
         </div>
       </footer>
     </div>
