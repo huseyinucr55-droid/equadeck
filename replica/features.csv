@@ -1,0 +1,44 @@
+feature,area,priority,original,clone,notes
+LaTeX textarea with live preview as you type,editor,must,yes,yes,CodeMirror 6 + MathJax SVG; 150ms debounce
+Render error state for invalid LaTeX,editor,must,partial,yes,message from MathJax + last good render dimmed; exports disabled while broken
+Symbol palette that inserts at cursor and wraps selection,palette,must,yes,yes,about 230 keys in 10 tabs + search; "a" -> "^{a}" verified
+Function dropdowns (ln sin lim max etc.),palette,must,yes,yes,merged into the Functions tab (searchable) instead of two selects
+Greek letters and operators and arrows and relations,palette,must,yes,yes,
+Download as PNG image,export,must,yes,yes,transparent background; dark export ink in both themes; 1x/2x/4x; iOS canvas cap handled
+Font size control for output,export,must,yes,yes,8-96px with an inline range error
+Matrix builder (bracket style and rows and cols),insert,must,yes,yes,S02; 6 styles; 1-12 rows/cols; cursor lands in the first cell
+Undo and redo history,editor,must,yes,yes,CodeMirror history; buttons disable at the ends
+Display style and text and bold toggles,palette,must,yes,yes,toolbar buttons + Style tab
+Multi-line equations (line breaks) and remove line breaks,editor,must,yes,yes,\\ wraps in \displaylines automatically; "Join lines" button
+Responsive mobile layout,ux,must,no,yes,390px: preview first and sticky; 44px touch keys; no horizontal scroll
+Colour dropdown and colour reference table,insert,should,yes,yes,7 colours in the Style tab + Colours sheet (31 named + hex + RGB); swatches drawn by MathJax
+Size dropdown (tiny to Huge),insert,should,yes,yes,Style tab
+Examples gallery that inserts a template,insert,should,yes,yes,S03: 12 own examples; click replaces (undoable); Shift+click appends
+LaTeX syntax cheat sheet,reference,should,yes,yes,S04: spacing / special chars / brackets / fractions / fonts / alignment
+Chemistry support with mhchem plus reference,reference,should,yes,yes,S07; mhchem loads on first use (14 KB chunk)
+Physics package support plus reference,reference,should,yes,yes,S08; same lazy chunk as chemistry
+Backgrounds and boxes (bbox boxed colorbox),reference,should,yes,yes,S06: highlight / frames / cancel
+Download as PDF,export,should,partial,yes,vector PDF sized to the equation; jsPDF + svg2pdf load on click
+Image output preview mode (raster),export,should,yes,yes,"Preview as image" switch shows the exported PNG
+Account with email and password,accounts,should,yes,no,S09 stub; needs /replica-backend
+Save snippets to account and reopen them,accounts,should,yes,no,S12 placeholder panel; needs /replica-backend
+Google sign-in,accounts,should,yes,no,needs /replica-backend
+Download as SVG,export,could,no,yes,standalone SVG with inlined glyphs
+Copy image or code to clipboard,export,could,no,yes,Copy LaTeX + Copy image (PNG via ClipboardItem; falls back with a message)
+LaTeX command autocomplete,editor,could,no,yes,on "\"; ~200 commands from the palette + extras; Enter inserts with the cursor in the first slot
+Click a reference sample to insert it,reference,could,no,yes,every row of every sheet is a button
+Weekly save quota with upgrade,accounts,could,yes,no,
+Edit profile and password,accounts,could,yes,no,
+Password reset by email,accounts,could,yes,no,
+Save snippets locally without an account,editor,could,no,yes,S12 for guests: save / load (undoable) / delete with Undo / filter; 50 max; same shape as the snippets table
+Facebook and Twitter login,accounts,could,yes,skip,app review overhead for little value; Google plus email first
+Lagrida brand and logo and icon sprites and example images,brand,could,yes,skip,owned by the original; redraw or render labels with MathJax
+PayPal donation for quota,monetisation,could,yes,skip,their arrangement; choose your own model in /replica-entrepreneur
+Existing users and their saved codes,data,could,yes,skip,data the app owns
+Copy for Word and PowerPoint (MathML on the clipboard),export,should,no,yes,fix F1: MathML as text; Word/PowerPoint paste it as an editable equation. e2e checks the clipboard; pasting into Office itself not verified here
+Packages-needed line and copy as LaTeX with usepackage,export,should,no,yes,fix F2: amsmath amssymb amscd xcolor[dvipsnames] cancel mhchem physics + warnings for MathJax-only commands, size commands and Unicode
+Export verified in Firefox and Safari,export,should,no,no,fix F3: Playwright WebKit + Firefox projects
+Instant repeat loads and offline use (service worker),editor,should,no,no,fix F4; also parity next step 3
+Automatic recent history,editor,could,no,no,fix F5 (thin evidence; cheap)
+More notation (mathtools braket upgreek extpfeil + ~60 keys),palette,could,no,no,fix F6
+Visual input mode for people who don't know LaTeX,editor,could,no,no,fix F7: large; prototype with MathLive first

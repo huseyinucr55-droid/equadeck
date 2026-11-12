@@ -1,0 +1,22 @@
+# Dependencies and build output
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Test output
+test-results/
+playwright-report/
+
+# Local env and secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+
+# Screenshots of the original app: reference only, never shipped or published
+replica/screens/
+replica/diffs/

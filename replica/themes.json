@@ -1,0 +1,28 @@
+{
+  "_about": "Themes for online LaTeX equation editors. Patterns are case-insensitive regular expressions matched against review text.",
+  "request_patterns": [
+    "\\bi wish", "\\bwished\\b", "\\brecommendation\\b", "\\bwould be (nice|great|good|helpful)\\b", "\\bwould love\\b",
+    "\\bcan we have\\b", "\\bcannot\\b", "\\bcan'?t find\\b", "\\bdoes not have\\b", "\\bdoesn'?t (have|support)\\b",
+    "\\bwithout\\b", "\\binclude the\\b", "\\bit would be to\\b"
+  ],
+  "themes": [
+    {"id": "export", "label": "Export formats and export quality (SVG, PNG, PDF)", "kind": "complaint",
+     "patterns": ["\\bsvg\\b", "\\bpng\\b", "\\bjpe?g\\b", "\\bpdf\\b", "\\bexports?\\b", "\\bformats?\\b"]},
+    {"id": "clipboard", "label": "Getting the equation into Word, Slides, Keynote, PowerPoint", "kind": "request",
+     "patterns": ["\\bclipboard\\b", "\\bpaste\\b", "\\bpowerpoint\\b", "\\bkeynote\\b", "\\bgoogle (docs|slides)\\b", "\\bword'?s\\b", "\\baddins?\\b"]},
+    {"id": "typing", "label": "Typing help: autocomplete, easier input for non-experts", "kind": "request",
+     "patterns": ["\\bautocomplete\\b", "\\bwysiwyg\\b", "\\bwsysiwyg\\b", "\\beasy\\b", "\\bproficient\\b", "\\bmath keyboard\\b", "\\bnative latex\\b"]},
+    {"id": "editor-pain", "label": "Equation editors that frustrate", "kind": "complaint",
+     "patterns": ["\\bfrustrated\\b", "\\babhorred\\b", "\\bunlike literally every\\b", "\\bcan'?t find a decent\\b"]},
+    {"id": "speed", "label": "Speed of the preview", "kind": "complaint",
+     "patterns": ["\\bslow\\b", "\\bfaster\\b", "\\bperformance\\b"]},
+    {"id": "coverage", "label": "Symbol and package coverage, knowing which package to load", "kind": "request",
+     "patterns": ["\\bsymbols?\\b", "\\bnotation\\b", "\\bpackage\\b", "\\bmhchem\\b"]},
+    {"id": "limits", "label": "Ads, accounts and save limits", "kind": "complaint",
+     "patterns": ["\\badvertisements?\\b", "\\bads\\b", "\\bcommercial\\b", "\\bfree plan\\b", "\\bper week\\b", "\\blimits?\\b"]},
+    {"id": "history", "label": "History of past equations", "kind": "request",
+     "patterns": ["\\bhistory\\b"]},
+    {"id": "praise", "label": "What people like", "kind": "complaint",
+     "patterns": ["\\bquick and simple\\b", "\\bworth using\\b", "\\bsimply a native\\b"]}
+  ]
+}

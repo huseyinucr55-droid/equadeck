@@ -1,0 +1,21 @@
+source,url,date,rating,text,about
+reddit,https://reddit.fsky.io/r/LaTeX/comments/1jb3skr/i_created_an_online_latex_editor_with,2025-03,,Lagrida cannot generate SVG and does not have autocomplete.,original
+review-site,https://help.lessonup.com/en/articles/14431773-online-latex-editors,2026,,"Fewer symbols available than CodeCogs, may not cover more advanced notation",original
+review-site,https://help.lessonup.com/en/articles/14431773-online-latex-editors,2026,,the free plan limits this to 4 per week,original
+review-site,https://help.lessonup.com/en/articles/14431773-online-latex-editors,2026,,Quick and simple to use,original
+forum,https://latex.org/forum/viewtopic.php?p=111652,2020-01-12,,That looks like a commercial site though since I see advertisements on it.,original
+reddit,https://reddit.fsky.io/r/LaTeX/comments/1jb3skr/i_created_an_online_latex_editor_with,2025-03,,Codecogs is very slow when generating previews.,category
+reddit,https://reddit.fsky.io/r/LaTeX/comments/1jb3skr/i_created_an_online_latex_editor_with,2025-03,,it would be to create comments indicating which package was used,category
+reddit,https://downdoot.com/r/LaTeX/comments/1jb3skr/i_created_an_online_latex_editor_with/mhrl71t/?context=3,2025-03-14,,One recommendation: include the mhchem,category
+reddit,https://reddit.fsky.io/r/LaTeX/comments/1jb3skr/i_created_an_online_latex_editor_with,2025-03,,the PNG and JPEG exports don't work properly.,category
+reddit,https://reddit.fsky.io/r/LaTeX/comments/1jb3skr/i_created_an_online_latex_editor_with,2025-03,,it sends the PNG or a PDF to the clipboard,category
+reddit,https://downdoot.com/r/LaTeX/comments/1j9ru27/online_tool_for_rendering_latex_equations_to_png/mhhf3l1/?context=3,2025-03-13,,"Anecdotally, the Vexlio editor has faster performance",category
+hacker-news,https://news.ycombinator.com/item?id=48276424,2026-05-26,,I just wished there could be something easy to replace this equation editor,category
+hacker-news,https://news.ycombinator.com/item?id=36795104,2023-07-19,,"Seriously, I still can't find a decent WSYSIWYG latex editor",category
+hacker-news,https://news.ycombinator.com/item?id=36946457,2023-07-31,,its equation editor is actually worth using (unlike literally every other equation editor),category
+hacker-news,https://news.ycombinator.com/item?id=27056551,2021-05-05,,Powerpoint doesn't directly support latex format without third-party addins,category
+hacker-news,https://news.ycombinator.com/item?id=21185823,2019-10-07,,the equation editor is simply a native LaTeX editor,category
+hacker-news,https://news.ycombinator.com/item?id=45699580,2025-10-24,,Has a history feature and can export in multiple formats.,category
+hacker-news,https://news.ycombinator.com/item?id=43182159,2025-02-26,,Can we have a damn math keyboard and proper character encoding,category
+hacker-news,https://news.ycombinator.com/item?id=22678245,2020-03-24,,She's sufficiently frustrated with word's equation editor,category
+hacker-news,https://news.ycombinator.com/item?id=39229161,2024-02-02,,I absolutely abhorred 2007-and-beyond’s equation editor,category

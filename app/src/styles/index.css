@@ -1,0 +1,71 @@
+@import "tailwindcss";
+@import "./tokens.css";
+@import "./tailwind.css";
+
+/* Export ink: equations are always exported in dark ink, whatever the
+   screen theme, so they paste cleanly into white documents. */
+:root { --lx-color-export-ink: #15181d; }
+
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--lx-color-bg);
+  color: var(--lx-color-text);
+  font: 400 var(--lx-text-sm)/var(--lx-leading-sm) var(--lx-font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* One focus style for everything interactive. */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: var(--lx-ring-width) solid var(--lx-color-focus);
+  outline-offset: var(--lx-ring-offset);
+}
+
+/* MathJax SVG inherits currentColor. */
+.math svg { display: inline-block; vertical-align: middle; }
+
+/* CodeMirror, themed with tokens. */
+.cm-editor {
+  background: var(--lx-color-bg);
+  color: var(--lx-color-text);
+  border: 1px solid var(--lx-color-border-input);
+  border-radius: var(--lx-radius-md);
+  font: var(--lx-text-code)/var(--lx-leading-code) var(--lx-font-mono);
+}
+.cm-editor.cm-focused {
+  outline: var(--lx-ring-width) solid var(--lx-color-focus);
+  outline-offset: var(--lx-ring-offset);
+  border-color: var(--lx-color-accent);
+}
+.cm-editor .cm-scroller { font-family: var(--lx-font-mono); }
+/* The content fills the box, so a click anywhere in it focuses the editor. */
+.cm-editor .cm-content { padding: var(--lx-space-3) 0; caret-color: var(--lx-color-text); min-height: var(--lx-editor-min-h); }
+.cm-editor .cm-line { padding: 0 var(--lx-space-3); }
+.cm-editor .cm-cursor { border-left-color: var(--lx-color-text); }
+.cm-editor .cm-selectionBackground,
+.cm-editor.cm-focused .cm-selectionBackground,
+.cm-editor ::selection { background: var(--lx-color-accent-soft) !important; }
+.cm-editor .cm-placeholder { color: var(--lx-color-text-muted); }
+
+/* Autocomplete popup. */
+.cm-tooltip.cm-tooltip-autocomplete {
+  background: var(--lx-color-bg);
+  color: var(--lx-color-text);
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-md);
+  box-shadow: var(--lx-shadow-pop);
+  overflow: hidden;
+}
+.cm-tooltip-autocomplete > ul { font: var(--lx-text-sm)/var(--lx-leading-sm) var(--lx-font-mono); max-height: 16em; }
+.cm-tooltip-autocomplete > ul > li { padding: 2px var(--lx-space-3) !important; }
+.cm-editor .cm-tooltip-autocomplete > ul > li[aria-selected] { background: var(--lx-color-accent-soft) !important; color: var(--lx-color-text) !important; }
+.cm-tooltip-autocomplete .cm-completionDetail { color: var(--lx-color-text-muted); font-family: var(--lx-font-sans); font-style: normal; margin-left: var(--lx-space-3); }
+.cm-tooltip-autocomplete .cm-completionMatchedText { color: var(--lx-color-accent); text-decoration: none; font-weight: 600; }
+
+dialog::backdrop { background: var(--lx-color-overlay); }
+dialog { color: var(--lx-color-text); }
+
+@media (prefers-reduced-motion: no-preference) {
+  dialog[open] { animation: lx-rise var(--lx-motion-base) var(--lx-ease); }
+}
+@keyframes lx-rise { from { opacity: 0; transform: translateY(8px); } }

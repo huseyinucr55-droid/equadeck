@@ -1,0 +1,60 @@
+/* Tailwind v4 mapping. Import order in src/index.css:
+     @import "tailwindcss";
+     @import "./styles/tokens.css";     (copy of replica/design/tokens.css)
+     @import "./styles/tailwind.css";   (this file)
+   Raw tokens live under --lx-*; this file maps them into Tailwind's theme so
+   components write bg-surface, text-muted, border-input, rounded-md,
+   shadow-pop. Never raw hex in a component. `inline` makes utilities resolve
+   to var(--lx-...) at use time, so the light/dark switch in tokens.css works. */
+
+@theme inline {
+  --color-bg: var(--lx-color-bg);
+  --color-surface: var(--lx-color-surface);
+  --color-surface-2: var(--lx-color-surface-2);
+  --color-border: var(--lx-color-border);
+  --color-input: var(--lx-color-border-input);
+  --color-fg: var(--lx-color-text);
+  --color-muted: var(--lx-color-text-muted);
+  --color-accent: var(--lx-color-accent);
+  --color-accent-hover: var(--lx-color-accent-hover);
+  --color-accent-soft: var(--lx-color-accent-soft);
+  --color-on-accent: var(--lx-color-on-accent);
+  --color-focus: var(--lx-color-focus);
+  --color-danger: var(--lx-color-danger);
+  --color-danger-soft: var(--lx-color-danger-soft);
+  --color-success: var(--lx-color-success);
+  --color-success-soft: var(--lx-color-success-soft);
+  --color-warning: var(--lx-color-warning);
+  --color-warning-soft: var(--lx-color-warning-soft);
+  --color-overlay: var(--lx-color-overlay);
+
+  --font-sans: var(--lx-font-sans);
+  --font-mono: var(--lx-font-mono);
+
+  --text-xs: var(--lx-text-xs);     --text-xs--line-height: var(--lx-leading-xs);
+  --text-sm: var(--lx-text-sm);     --text-sm--line-height: var(--lx-leading-sm);
+  --text-base: var(--lx-text-base); --text-base--line-height: var(--lx-leading-base);
+  --text-lg: var(--lx-text-lg);     --text-lg--line-height: var(--lx-leading-lg);
+  --text-xl: var(--lx-text-xl);     --text-xl--line-height: var(--lx-leading-xl);
+  --text-code: var(--lx-text-code); --text-code--line-height: var(--lx-leading-code);
+
+  --spacing: 4px; /* p-1 = 4px, p-2 = 8px, ... the 4px scale */
+
+  --radius-sm: var(--lx-radius-sm);
+  --radius-md: var(--lx-radius-md);
+  --radius-lg: var(--lx-radius-lg);
+
+  --shadow-card: var(--lx-shadow-card);
+  --shadow-pop: var(--lx-shadow-pop);
+
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+
+  --ease-out: var(--lx-ease);
+}
+
+/* Class names: text-fg (body text), text-muted, border-input, bg-surface-2.
+   The roles "text" and "border-input" are named fg / input here because
+   Tailwind's own text-* and border-* prefixes would collide. */
