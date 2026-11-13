@@ -2,6 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import { AlertTriangle } from 'lucide-react';
 import { render } from '../lib/mathjax';
 import { toPng } from '../lib/export';
+import { useT } from '../lib/i18n';
 
 export type PreviewHandle = { svg: () => SVGSVGElement | null };
 export type PreviewStatus = { empty: boolean; error: boolean; ready: boolean; fresh: boolean };
@@ -20,6 +21,7 @@ const DEBOUNCE_MS = 150;
 const ERROR_DELAY_MS = 700;
 
 export const Preview = forwardRef<PreviewHandle, Props>(function Preview({ code, fontSize, raster, errorId, onStatus }, ref) {
+  const t = useT();
   const [svg, setSvg] = useState<string | null>(null); // null until the engine has rendered once
   const [error, setError] = useState<string | null>(null);
   const [renderedCode, setRenderedCode] = useState<string | null>(null); // code the current svg was made from
@@ -80,12 +82,12 @@ export const Preview = forwardRef<PreviewHandle, Props>(function Preview({ code,
   useImperativeHandle(ref, () => ({ svg: () => box.current?.querySelector('svg') ?? null }));
 
   return (
-    <section aria-label="Preview" className="relative overflow-hidden rounded-lg border border-border bg-surface">
+    <section aria-label={t('Preview')} className="relative overflow-hidden rounded-lg border border-border bg-surface">
       {!ready && !empty && <div aria-hidden className="absolute inset-x-0 top-0 h-0.5 animate-pulse bg-accent" />}
       <div
         ref={box}
         role="img"
-        aria-label={empty ? 'Empty preview' : code}
+        aria-label={empty ? t('Empty preview') : code}
         aria-busy={!ready}
         className={`math relative flex min-h-[var(--lx-preview-min-h)] items-center justify-center overflow-x-auto p-6 text-fg transition-opacity ${
           error ? 'opacity-40' : ''
@@ -93,9 +95,9 @@ export const Preview = forwardRef<PreviewHandle, Props>(function Preview({ code,
         style={{ fontSize: `${fontSize}px` }}
       >
         {empty ? (
-          <p className="text-sm text-muted">Start typing. Your equation shows up here.</p>
+          <p className="text-sm text-muted">{t('Start typing. Your equation shows up here.')}</p>
         ) : !ready ? (
-          <p className="text-sm text-muted">Loading the renderer…</p>
+          <p className="text-sm text-muted">{t('Loading the renderer…')}</p>
         ) : (
           <>
             <span className={`max-w-full ${png ? 'invisible absolute' : ''}`} dangerouslySetInnerHTML={{ __html: svg ?? '' }} />
@@ -104,14 +106,14 @@ export const Preview = forwardRef<PreviewHandle, Props>(function Preview({ code,
         )}
       </div>
       {raster && png && (
-        <p className="px-4 pb-2 text-xs text-muted">Showing the image as it will be exported.</p>
+        <p className="px-4 pb-2 text-xs text-muted">{t('Showing the image as it will be exported.')}</p>
       )}
       <div id={errorId} aria-live="polite">
         {error && !empty && (
           <p role="alert" className="mx-4 mb-4 flex items-start gap-2 rounded-md bg-danger-soft px-4 py-3 text-sm text-danger">
             <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0" />
             <span>
-              {error}. {svg ? 'Your last working version stays on screen.' : ''}
+              {t(error)}. {svg ? t('Your last working version stays on screen.') : ''}
             </span>
           </p>
         )}

@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { X } from 'lucide-react';
+import { setLang, useLang, useT } from '../lib/i18n';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type Size = 'sm' | 'md';
@@ -63,6 +64,7 @@ export function Dialog({
   footer?: ReactNode;
   wide?: boolean;
 }) {
+  const t = useT();
   const ref = useRef<HTMLDialogElement>(null);
   // Close on a backdrop click only when the press also started on the
   // backdrop; a click that opened the dialog, or a text-selection drag that
@@ -93,7 +95,7 @@ export function Dialog({
         {/* divs, not header/footer: those would add page landmarks (BUG-006) */}
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <h2 className="text-lg font-semibold">{title}</h2>
-          <IconButton label="Close" onClick={onClose}>
+          <IconButton label={t('Close')} onClick={onClose}>
             <X aria-hidden className="size-4" />
           </IconButton>
         </div>
@@ -119,6 +121,7 @@ export function NumberField({
   onChange: (n: number) => void;
   id: string;
 }) {
+  const t = useT();
   const invalid = !Number.isFinite(value) || value < min || value > max;
   return (
     <div className="flex items-center gap-2">
@@ -139,7 +142,7 @@ export function NumberField({
       />
       {invalid && (
         <span id={`${id}-hint`} className="text-xs text-danger">
-          {min} to {max}
+          {t('{min} to {max}', { min, max })}
         </span>
       )}
     </div>
@@ -169,5 +172,18 @@ export function Toast({ toast, onDismiss }: { toast: ToastState; onDismiss: () =
         </div>
       )}
     </div>
+  );
+}
+
+/** Header switch between English and German. The label says what a click does. */
+export function LangSwitch() {
+  const lang = useLang();
+  const label = lang === 'de' ? 'DE: Sprache: Deutsch. Switch to English' : 'EN: Language: English. Auf Deutsch umschalten';
+  return (
+    <IconButton label={label} onClick={() => setLang(lang === 'de' ? 'en' : 'de')} className="w-9">
+      <span aria-hidden className="text-xs font-semibold">
+        {lang === 'de' ? 'DE' : 'EN'}
+      </span>
+    </IconButton>
   );
 }

@@ -2,6 +2,8 @@
 // Same shape as the `snippets` table in replica/schema.sql, so syncing to an
 // account later is a straight copy.
 
+import { fill, type Vars } from './i18n';
+
 export type Snippet = { id: string; title: string | null; code: string; settings: { font_size: number }; updated_at: string };
 
 const KEY = 'lx.snippets.v1';
@@ -55,15 +57,15 @@ export function restoreSnippet(s: Snippet): Snippet[] {
   return next;
 }
 
-export function relativeTime(iso: string, now = Date.now()): string {
+export function relativeTime(iso: string, now = Date.now(), t: (s: string, v?: Vars) => string = (s, v) => fill(s, v)): string {
   const s = Math.round((now - new Date(iso).getTime()) / 1000);
-  if (s < 60) return 'just now';
+  if (s < 60) return t('just now');
   const m = Math.round(s / 60);
-  if (m < 60) return `${m} min ago`;
+  if (m < 60) return t('{n} min ago', { n: m });
   const h = Math.round(m / 60);
-  if (h < 24) return `${h} h ago`;
+  if (h < 24) return t('{n} h ago', { n: h });
   const d = Math.round(h / 24);
-  if (d === 1) return 'yesterday';
-  if (d < 30) return `${d} days ago`;
+  if (d === 1) return t('yesterday');
+  if (d < 30) return t('{n} days ago', { n: d });
   return new Date(iso).toLocaleDateString();
 }

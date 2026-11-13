@@ -21,6 +21,21 @@ import 'mathjax-full/js/input/tex/newcommand/NewcommandConfiguration.js';
 const adaptor = liteAdaptor();
 SafeHandler(RegisterHTMLHandler(adaptor));
 
+// Letters the TeX fonts lack (ä, ö, ü, ß, é, emoji …) are drawn as SVG <text>
+// in a system font. The lite adaptor can't measure text and says it is 0 wide,
+// so the next letters overlapped or left a gap ("Verknü pfungen"). In the
+// browser, measure it for real with a canvas in the same font.
+const measure = typeof document !== 'undefined' ? document.createElement('canvas').getContext('2d') : null;
+if (measure) {
+  const liteSize = adaptor.nodeSize.bind(adaptor);
+  adaptor.nodeSize = (node, em = 1, local?: boolean) => {
+    if (adaptor.kind(node) !== 'text') return liteSize(node, em, local);
+    const attr = (name: string) => adaptor.getAttribute(node, name) || '';
+    measure.font = `${attr('font-style')} ${attr('font-weight')} ${parseFloat(attr('font-size')) || em}px ${attr('font-family') || 'serif'}`;
+    return [measure.measureText(adaptor.textContent(node)).width / em, 0];
+  };
+}
+
 const CORE = ['base', 'ams', 'amscd', 'color', 'bbox', 'boldsymbol', 'cancel', 'newcommand'];
 // mhchem and physics register themselves when lib/extras.ts is imported.
 const EXTRAS = ['mhchem', 'physics'];
@@ -64,7 +79,13 @@ export function prepare(raw: string): string {
   // Control characters (e.g. a form feed pasted from a PDF) crash MathJax's
   // parser with an internal TypeError (BUG-008); treat them as spaces.
   // eslint-disable-next-line no-control-regex
-  const code = raw.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, ' ');
+  const cleaned = raw.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, ' ');
+  // Maths mode drops spaces, so "\text{Hallo} x" rendered as "Hallox". A space
+  // typed right next to a \text{…} block is meant to show: make it "\ ".
+  const TEXT = String.raw`\\text(?:bf|it|rm|sf|tt)?\s*\{[^{}]*\}`;
+  const code = cleaned
+    .replace(new RegExp(`(${TEXT}) +(?=\\S)`, 'g'), '$1\\ ')
+    .replace(new RegExp(`(\\S) +(${TEXT})`, 'g'), '$1\\ $2');
   const hasBreak = /\\\\/.test(code);
   const hasEnv = /\\begin\s*\{/.test(code);
   return hasBreak && !hasEnv ? `\\displaylines{${code}}` : code;

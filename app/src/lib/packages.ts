@@ -76,7 +76,9 @@ export function analyze(code: string): Analysis {
   const multiline = isMultiline(code);
   if (multiline) need('amsmath', 'several lines (gather*)');
 
-  const unicode = [...new Set([...code].filter((c) => c.charCodeAt(0) > 127))];
+  // Latin letters with accents (ä ö ü ß é …) compile with pdfLaTeX's default
+  // UTF-8 input; only other characters (÷, ✓, Greek, emoji) need XeLaTeX.
+  const unicode = [...new Set([...code].filter((c) => c.charCodeAt(0) > 127 && !/\p{Script=Latin}/u.test(c)))];
   if (unicode.length) {
     warn(`Unicode characters (${unicode.slice(0, 6).join(' ')}) need XeLaTeX or LuaLaTeX; with pdfLaTeX use commands instead (e.g. \\div for ÷).`);
   }

@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
-import { EditorSelection, EditorState } from '@codemirror/state';
+import { Compartment, EditorSelection, EditorState } from '@codemirror/state';
+import { useT, type TFn } from '../lib/i18n';
 import { EditorView, keymap, placeholder } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, redo, redoDepth, undo, undoDepth } from '@codemirror/commands';
 import { HighlightStyle, StreamLanguage, syntaxHighlighting } from '@codemirror/language';
@@ -32,7 +33,17 @@ const highlight = HighlightStyle.define([
   { tag: [tags.number, tags.atom], color: 'var(--lx-color-success)' },
 ]);
 
+/** The only language-dependent parts of the editor: its placeholder and accessible name. */
+const texts = (t: TFn) => [
+  placeholder(t('Type LaTeX here, like \\frac{a}{b}')),
+  EditorView.contentAttributes.of({ 'aria-label': t('LaTeX source'), spellcheck: 'false', autocapitalize: 'off' }),
+];
+
 export const Editor = forwardRef<EditorHandle, Props>(function Editor({ initialValue, onChange, onHistory, describedBy }, ref) {
+  const t = useT();
+  const textsBox = useRef(new Compartment());
+  const tRef = useRef(t);
+  tRef.current = t;
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const cbs = useRef({ onChange, onHistory });
@@ -51,8 +62,7 @@ export const Editor = forwardRef<EditorHandle, Props>(function Editor({ initialV
           StreamLanguage.define(stex),
           syntaxHighlighting(highlight),
           EditorView.lineWrapping,
-          placeholder('Type LaTeX here, like \\frac{a}{b}'),
-          EditorView.contentAttributes.of({ 'aria-label': 'LaTeX source', spellcheck: 'false', autocapitalize: 'off' }),
+          textsBox.current.of(texts(tRef.current)),
           EditorView.updateListener.of((u) => {
             if (u.docChanged) cbs.current.onChange(u.state.doc.toString());
             if (u.transactions.length) {
@@ -70,6 +80,10 @@ export const Editor = forwardRef<EditorHandle, Props>(function Editor({ initialV
     // The editor owns its document after mount; initialValue is read once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    view.current?.dispatch({ effects: textsBox.current.reconfigure(texts(t)) });
+  }, [t]);
 
   useEffect(() => {
     if (describedBy) view.current?.contentDOM.setAttribute('aria-describedby', describedBy);

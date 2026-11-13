@@ -161,7 +161,24 @@ test.describe('F01 write an equation and download it', () => {
 // renderer and showed an internal JS error instead of the equation.
 test('F01-N5 pasted control characters are ignored, not shown as an internal error', async ({ page }) => {
   await openApp(page);
-  await setCode(page, 'x = \f\u0008 \frac{1}{2}');
+  await setCode(page, 'x = \f\u0008 \\frac{1}{2}');
   await waitRendered(page);
   await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
+// Spaces typed next to \text{...} must stay visible: LaTeX math mode drops
+// them ("\text{Hallo} x" rendered as "Hallox").
+test('F01-E8 spaces around \\text{} are kept', async ({ page }) => {
+  await openApp(page);
+  const widthOf = async (code: string) => {
+    await setCode(page, code);
+    await waitRendered(page);
+    return previewBox(page).locator('svg').first().evaluate((s) => s.getBoundingClientRect().width);
+  };
+  const tight = await widthOf('\\text{Hallo}x');
+  const spaced = await widthOf('\\text{Hallo} x');
+  const spacedBefore = await widthOf('x \\text{Hallo}');
+  const tightBefore = await widthOf('x\\text{Hallo}');
+  expect(spaced).toBeGreaterThan(tight + 2);
+  expect(spacedBefore).toBeGreaterThan(tightBefore + 2);
 });

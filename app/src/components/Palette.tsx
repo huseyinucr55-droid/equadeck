@@ -2,6 +2,7 @@ import { memo, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Search } from 'lucide-react';
 import { ALL_SYMBOLS, GROUPS, labelOf, type Sym } from '../data/symbols';
 import { useEngine } from '../lib/mathjax';
+import { useT } from '../lib/i18n';
 
 type Engine = NonNullable<ReturnType<typeof useEngine>>;
 
@@ -16,14 +17,16 @@ const Key = memo(function Key({
   tabIndex: number;
   engine: Engine | null;
 }) {
+  const t = useT();
+  const name = t(sym.name);
   const html = engine?.renderLabel(labelOf(sym)) ?? '';
   return (
     <button
       type="button"
       data-key
       tabIndex={tabIndex}
-      aria-label={sym.name}
-      title={`${sym.name}  ${sym.insert.replace('#0', '…').trim()}`}
+      aria-label={name}
+      title={`${name}  ${sym.insert.replace('#0', '…').trim()}`}
       // Keep the editor's selection: don't take focus on mouse down.
       onMouseDown={(e) => e.preventDefault()}
       onClick={() => onInsert(sym.insert)}
@@ -63,6 +66,7 @@ function onGridKey(e: KeyboardEvent<HTMLDivElement>) {
 }
 
 export function Palette({ onInsert }: { onInsert: (tpl: string) => void }) {
+  const t = useT();
   const engine = useEngine();
   const [tab, setTab] = useState(GROUPS[0].id);
   const [query, setQuery] = useState('');
@@ -71,8 +75,8 @@ export function Palette({ onInsert }: { onInsert: (tpl: string) => void }) {
   const q = query.trim().toLowerCase();
   const visible = useMemo(() => {
     if (!q) return GROUPS.find((g) => g.id === tab)!.symbols;
-    return ALL_SYMBOLS.filter((s) => `${s.name} ${s.insert} ${s.keywords ?? ''}`.toLowerCase().includes(q));
-  }, [q, tab]);
+    return ALL_SYMBOLS.filter((s) => `${s.name} ${t(s.name)} ${s.insert} ${s.keywords ?? ''}`.toLowerCase().includes(q));
+  }, [q, tab, t]);
 
   function onTabKey(e: KeyboardEvent<HTMLDivElement>) {
     const i = GROUPS.findIndex((g) => g.id === tab);
@@ -85,9 +89,9 @@ export function Palette({ onInsert }: { onInsert: (tpl: string) => void }) {
   }
 
   return (
-    <section aria-label="Symbols" className="flex flex-col gap-2">
+    <section aria-label={t('Symbols')} className="flex flex-col gap-2">
       <div className="flex flex-wrap items-end gap-2">
-        <div role="tablist" aria-label="Symbol groups" onKeyDown={onTabKey} className="-mb-px flex min-w-0 flex-1 overflow-x-auto border-b border-border [scrollbar-width:none]">
+        <div role="tablist" aria-label={t('Symbol groups')} onKeyDown={onTabKey} className="-mb-px flex min-w-0 flex-1 overflow-x-auto border-b border-border [scrollbar-width:none]">
           {GROUPS.map((g) => {
             const on = g.id === tab && !q;
             return (
@@ -109,19 +113,19 @@ export function Palette({ onInsert }: { onInsert: (tpl: string) => void }) {
                   on ? 'border-accent text-fg' : 'border-transparent text-muted hover:text-fg'
                 }`}
               >
-                {g.title}
+                {t(g.title)}
               </button>
             );
           })}
         </div>
         <label className="relative flex items-center max-sm:order-first max-sm:w-full">
-          <span className="sr-only">Search symbols</span>
+          <span className="sr-only">{t('Search symbols')}</span>
           <Search aria-hidden className="pointer-events-none absolute left-2 size-4 text-muted" />
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search symbols"
+            placeholder={t('Search symbols')}
             className="h-8 w-full rounded-md border sm:w-44 border-input bg-bg pl-8 pr-2 text-sm text-fg placeholder:text-muted"
           />
         </label>
@@ -131,7 +135,7 @@ export function Palette({ onInsert }: { onInsert: (tpl: string) => void }) {
         id="palette-panel"
         role="tabpanel"
         aria-labelledby={q ? undefined : `tab-${tab}`}
-        aria-label={q ? `Search results for ${query}` : undefined}
+        aria-label={q ? t('Search results for {q}', { q: query }) : undefined}
         onKeyDown={onGridKey}
         className="flex min-h-[calc(var(--lx-key)*2+4px)] flex-wrap content-start gap-1"
       >
@@ -140,7 +144,7 @@ export function Palette({ onInsert }: { onInsert: (tpl: string) => void }) {
             <Key key={`${sym.name}-${sym.insert}`} sym={sym} onInsert={onInsert} tabIndex={i === 0 ? 0 : -1} engine={engine} />
           ))
         ) : (
-          <p className="py-2 text-sm text-muted">No symbols match “{query}”.</p>
+          <p className="py-2 text-sm text-muted">{t('No symbols match “{q}”.', { q: query })}</p>
         )}
       </div>
     </section>
