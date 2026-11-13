@@ -23,6 +23,7 @@ const AUTO_DOWNLOAD_MS = 3000;
 import { APP_NAME } from './brand';
 import { to } from './lib/paths';
 import { DEFAULT_INPUT, toLatex, type InputOptions } from './lib/typing';
+import { setReadableCommands, toReadable } from './lib/completions';
 
 const DRAFT_KEY = 'lx.draft.v1';
 const SEED = 'f(x) = \\int_{-\\infty}^{\\infty} \\hat{f}(\\xi)\\, e^{2\\pi i \\xi x}\\, d\\xi';
@@ -112,6 +113,7 @@ export default function App() {
   const toastTimer = useRef<number | undefined>(undefined);
   const { theme, next: nextTheme } = useTheme();
   const [input, setInput] = useInputOptions();
+  useEffect(() => setReadableCommands(input.readable), [input.readable]);
   // What gets rendered and copied: the typed code with shortcuts and spaces applied.
   const latex = useMemo(() => toLatex(code, input), [code, input]);
 
@@ -136,7 +138,8 @@ export default function App() {
   }, []);
 
   const onStatus = useCallback((s: PreviewStatus) => setStatus(s), []);
-  const insert = useCallback((tpl: string) => editor.current?.insertTemplate(tpl), []);
+  // Palette keys and toolbar buttons follow the "readable commands" choice too.
+  const insert = useCallback((tpl: string) => editor.current?.insertTemplate(toReadable(tpl)), []);
   const close = useCallback(() => setPanel(null), []);
   /** Run an editor change after a dialog has closed (closing returns focus to its trigger). */
   const afterClose = (fn: () => void) => {
@@ -321,6 +324,10 @@ export default function App() {
                 <input type="checkbox" className="size-4 accent-[var(--lx-accent)]" checked={input.spaces} onChange={(e) => setInput({ spaces: e.target.checked })} />
                 {t('Keep my spaces')}
               </label>
+              <label className="flex cursor-pointer items-center gap-2">
+                <input type="checkbox" className="size-4 accent-[var(--lx-accent)]" checked={input.readable} onChange={(e) => setInput({ readable: e.target.checked })} />
+                {t('Readable commands (\\ElementOf instead of \\in)')}
+              </label>
             </div>
           </div>
 
@@ -452,7 +459,7 @@ export default function App() {
         onClose={close}
         onInsert={(snippet) =>
           afterClose(() => {
-            editor.current?.insertTemplate(snippet);
+            editor.current?.insertTemplate(toReadable(snippet));
             say(t('Inserted.'));
           })
         }

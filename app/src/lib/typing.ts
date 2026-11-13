@@ -2,14 +2,18 @@
 // Applied before rendering and before copying, so the copied LaTeX matches
 // the preview. Text, chemistry and environment names are left alone.
 
+import { resolveAliases } from './completions';
+
 export type InputOptions = {
   /** "=>" becomes ⇒, "!=" becomes ≠ and so on. */
   shortcuts: boolean;
   /** A space typed between two things shows as a space ("a b", "\alpha x"). */
   spaces: boolean;
+  /** Autocomplete inserts readable names (\ElementVon) instead of LaTeX ones (\in). */
+  readable: boolean;
 };
 
-export const DEFAULT_INPUT: InputOptions = { shortcuts: true, spaces: false };
+export const DEFAULT_INPUT: InputOptions = { shortcuts: true, spaces: false, readable: true };
 
 /** Longest first, so "<=>" wins over "<=" and "=>". */
 export const SHORTCUTS: [string, string][] = [
@@ -87,7 +91,8 @@ function applySpaces(code: string): string {
 
 /** The LaTeX that gets rendered and copied. */
 export function toLatex(code: string, opts: InputOptions): string {
-  let out = code;
+  // Readable commands (\ElementVon, \Bruch) always work, whatever the options.
+  let out = resolveAliases(code);
   if (opts.shortcuts) out = applyShortcuts(out);
   if (opts.spaces) out = applySpaces(out);
   return out;

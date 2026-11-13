@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { test, expect, openApp, setCode, waitRendered, previewBox, previewSvg } from './helpers';
+import { test, expect, openApp, setCode, waitRendered, previewBox, previewSvg, code } from './helpers';
 
 const widthOf = async (page: Page, code: string) => {
   await setCode(page, code);
@@ -38,7 +38,45 @@ test.describe('Typing made easier', () => {
     await expect(previewBox(page)).toHaveAttribute('aria-label', '\\text{a => b} \\Rightarrow \\ce{H2 -> H2O}');
   });
 
-  test('TY-4 "Keep my spaces" shows typed spaces and remembers the choice', async ({ page }) => {
+  test('TY-5 commands are found by their German meaning and described in German', async ({ page }) => {
+    await openApp(page);
+    await page.getByRole('button', { name: /Language: English/ }).click();
+    const box = page.getByRole('textbox', { name: 'LaTeX-Quelltext' });
+    const clear = async () => {
+      await box.click();
+      await page.keyboard.press('ControlOrMeta+a');
+      await page.keyboard.press('Delete');
+    };
+    await clear();
+    await page.keyboard.type('\\in');
+    await expect(page.getByRole('option', { name: /\\ElementVon\s*\\in · Element von/ })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await clear();
+    await page.keyboard.insertText('x ');
+    await page.keyboard.type('Element von');
+    await expect(page.getByRole('option', { name: /\\in/ }).first()).toBeVisible();
+    await page.waitForTimeout(300); // CodeMirror ignores Enter right after the list opens
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('A');
+    // The readable command stays in the editor; the preview and copies get real LaTeX.
+    expect(await code(page)).toBe('x \\ElementVon A');
+    await expect(page.getByRole('img', { name: 'x \\in A', exact: true })).toBeVisible();
+    await clear();
+    await page.keyboard.type('\\unendlich');
+    await expect(page.getByRole('option', { name: /\\Unendlich.*\\infty/ }).first()).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    // Turned off, picking a command inserts the LaTeX name.
+    await page.getByRole('checkbox', { name: /Lesbare Befehle/ }).uncheck();
+    await clear();
+    await page.keyboard.type('\\elem');
+    await expect(page.getByRole('option', { name: /\\in\s*Element von/ })).toBeVisible();
+    await page.waitForTimeout(300);
+    await page.keyboard.press('Enter');
+    expect(await code(page)).toBe('\\in ');
+  });
+
+  test('TY-4"Keep my spaces" shows typed spaces and remembers the choice', async ({ page }) => {
     await openApp(page);
     const tight = await widthOf(page, '\\alpha x');
     await page.getByRole('checkbox', { name: 'Keep my spaces' }).check();

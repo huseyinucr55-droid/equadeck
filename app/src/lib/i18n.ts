@@ -487,6 +487,26 @@ const DE: Record<string, string> = {
   'Yes. Most equation tools can give you their LaTeX; paste it in.':
     'Ja. Die meisten Formel-Tools können dir ihr LaTeX geben; füge es einfach ein.',
   'Your next equation is one paste away': 'Deine nächste Formel ist nur einen Einfügevorgang entfernt',
+
+  // Command names (palette tooltips, symbol search, autocomplete)
+  'alpha': 'Alpha', 'beta': 'Beta', 'gamma': 'Gamma', 'delta': 'Delta', 'epsilon': 'Epsilon',
+  'varepsilon': 'Epsilon (Variante)', 'zeta': 'Zeta', 'eta': 'Eta', 'theta': 'Theta', 'vartheta': 'Theta (Variante)',
+  'iota': 'Jota', 'kappa': 'Kappa', 'lambda': 'Lambda', 'mu': 'My', 'nu': 'Ny', 'xi': 'Xi', 'pi': 'Pi', 'rho': 'Rho',
+  'sigma': 'Sigma', 'tau': 'Tau', 'upsilon': 'Ypsilon', 'phi': 'Phi', 'varphi': 'Phi (Variante)', 'chi': 'Chi',
+  'psi': 'Psi', 'omega': 'Omega',
+  'sin': 'Sinus', 'cos': 'Kosinus', 'tan': 'Tangens', 'cot': 'Kotangens', 'sec': 'Sekans', 'csc': 'Kosekans',
+  'arcsin': 'Arkussinus', 'arccos': 'Arkuskosinus', 'arctan': 'Arkustangens',
+  'sinh': 'Sinus hyperbolicus', 'cosh': 'Kosinus hyperbolicus', 'tanh': 'Tangens hyperbolicus', 'coth': 'Kotangens hyperbolicus',
+  'ln': 'natürlicher Logarithmus', 'log': 'Logarithmus', 'lg': 'Zehnerlogarithmus', 'exp': 'Exponentialfunktion',
+  'det': 'Determinante', 'dim': 'Dimension', 'ker': 'Kern', 'deg': 'Grad', 'gcd': 'ggT (größter gemeinsamer Teiler)',
+  'arg': 'Argument', 'Pr': 'Wahrscheinlichkeit', 'max': 'Maximum', 'min': 'Minimum', 'sup': 'Supremum', 'inf': 'Infimum',
+  'limsup': 'Limes superior', 'liminf': 'Limes inferior',
+  'aligned lines': 'ausgerichtete Zeilen', 'matrix': 'Matrix', 'growing parentheses': 'mitwachsende Klammern',
+  'display fraction': 'großer Bruch', 'upright': 'aufrecht', 'colour': 'Farbe', 'chemistry': 'Chemie',
+  'derivative': 'Ableitung', 'partial derivative': 'partielle Ableitung', 'bold vector': 'fetter Vektor',
+  'ket': 'Ket', 'bra': 'Bra',
+  'dot accent': 'Punkt darüber', 'colour from here': 'Farbe ab hier',
+  'Readable commands (\\ElementOf instead of \\in)': 'Lesbare Befehle (\\ElementVon statt \\in)',
 };
 
 const KEY = 'lx.lang';

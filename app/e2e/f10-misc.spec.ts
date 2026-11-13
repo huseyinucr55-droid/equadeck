@@ -27,7 +27,8 @@ test('X-2 autocomplete inserts a command with its slots', async ({ page }) => {
   await expect(page.getByRole('option', { name: /\\frac/ }).first()).toBeVisible();
   await page.keyboard.press('Enter');
   await page.keyboard.type('1');
-  expect(await code(page)).toBe('\\frac{1}{}');
+  // Readable commands are on by default: \Fraction is rendered as \frac.
+  expect(await code(page)).toBe('\\Fraction{1}{}');
 });
 
 test('X-3 privacy page', async ({ page }) => {

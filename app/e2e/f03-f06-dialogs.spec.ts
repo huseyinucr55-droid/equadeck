@@ -77,7 +77,9 @@ test.describe('F05 look up syntax', () => {
     await axe(page, 'dialog[open]');
     await dialog.getByRole('button', { name: 'Insert \\ce{H2O}' }).click();
     await expect(dialog).toBeHidden();
-    expect(await code(page)).toBe('x\\ce{H2O}');
+    // Readable commands are on by default: \Chemistry renders as \ce.
+    expect(await code(page)).toBe('x\\Chemistry{H2O}');
+    await expect(page.getByRole('img', { name: 'x\\ce{H2O}', exact: true })).toBeVisible();
     await waitRendered(page);
   });
 

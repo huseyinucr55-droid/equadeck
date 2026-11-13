@@ -133,7 +133,7 @@ export const GROUPS: Group[] = [
       s('hat', '\\hat{#0}', '\\hat{a}'), s('wide hat', '\\widehat{#0}', '\\widehat{ab}'),
       s('bar', '\\bar{#0}', '\\bar{a}'), s('overline', '\\overline{#0}', '\\overline{ab}'),
       s('vector', '\\vec{#0}', '\\vec{a}'), s('arrow over', '\\overrightarrow{#0}', '\\overrightarrow{AB}'),
-      s('dot', '\\dot{#0}', '\\dot{a}', 'derivative'), s('double dot', '\\ddot{#0}', '\\ddot{a}'),
+      s('dot accent', '\\dot{#0}', '\\dot{a}', 'derivative'), s('double dot', '\\ddot{#0}', '\\ddot{a}'),
       s('tilde', '\\tilde{#0}', '\\tilde{a}'), s('underline', '\\underline{#0}', '\\underline{a}'),
       s('prime', "{#0}'", "a'", 'derivative'), s('cancel', '\\cancel{#0}', '\\cancel{x}', 'strike'),
     ],

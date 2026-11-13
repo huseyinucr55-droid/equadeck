@@ -18,7 +18,8 @@ test.describe('F02 build an equation with the palette', () => {
     await setCode(page, '');
     await key(page, 'fraction').click();
     await page.keyboard.type('1');
-    expect(await code(page)).toBe('\\frac{1}{}');
+    // Readable commands are on by default (rendered as \frac).
+    expect(await code(page)).toBe('\\Fraction{1}{}');
   });
 
   test('F02-E2 search filters across groups and clears back to the tab', async ({ page }) => {
