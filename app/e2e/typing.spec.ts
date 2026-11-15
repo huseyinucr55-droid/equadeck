@@ -100,6 +100,13 @@ test.describe('Typing made easier', () => {
     await rendered();
     const word = await page.locator('section[aria-label="Vorschau"] svg').first().evaluate((s) => s.getBoundingClientRect().height);
     expect(oneLine).toBeLessThan(word * 1.5);
+    // Enter starts a new line in the formula, like in Word.
+    await page.keyboard.press('End');
+    await page.keyboard.press('Enter');
+    await page.keyboard.insertText('Mengen');
+    await rendered();
+    const twoLines = await page.locator('section[aria-label="Vorschau"] svg').first().evaluate((s) => s.getBoundingClientRect().height);
+    expect(twoLines).toBeGreaterThan(word * 1.6);
 
     // A plain word opens the list with the first entry chosen; Enter takes it.
     await clear();

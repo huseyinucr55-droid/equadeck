@@ -125,9 +125,29 @@ function braceRange(code: string, open: number): [number, number] {
   return [open, code.length];
 }
 
+/**
+ * Enter starts a new line, like in Word: each line break becomes "\\".
+ * Not inside \begin…\end (a matrix spreads its rows over lines on purpose),
+ * not where the line already ends in "\\", and not at the very start or end.
+ */
+export function linesToBreaks(code: string): string {
+  const trimmed = code.replace(/^\s*\n/, '').replace(/\n\s*$/, '');
+  let depth = 0;
+  let out = '';
+  for (let i = 0; i < trimmed.length; i++) {
+    const rest = trimmed.slice(i);
+    if (/^\\begin\s*\{/.test(rest)) depth++;
+    else if (/^\\end\s*\{/.test(rest)) depth = Math.max(0, depth - 1);
+    const ch = trimmed[i];
+    if (ch === '\n' && depth === 0 && !/\\\\\s*$/.test(out)) out += ' \\\\\n';
+    else out += ch;
+  }
+  return out;
+}
+
 export function toLatex(code: string, opts: InputOptions): string {
   // Readable commands (\ElementVon, \Bruch) always work, whatever the options.
-  let out = resolveAliases(code);
+  let out = linesToBreaks(resolveAliases(code));
   if (opts.wordsAsText) out = applyWords(out);
   if (opts.shortcuts) out = applyShortcuts(out);
   if (opts.spaces) out = applySpaces(out);

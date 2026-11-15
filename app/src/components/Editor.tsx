@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Compartment, EditorSelection, EditorState, RangeSetBuilder, StateEffect } from '@codemirror/state';
 import { useT, type TFn } from '../lib/i18n';
 import { Decoration, EditorView, ViewPlugin, WidgetType, keymap, placeholder, type DecorationSet, type ViewUpdate } from '@codemirror/view';
@@ -10,6 +10,8 @@ import { tags } from '@lezer/highlight';
 import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
 import { applyTemplate } from '../lib/insert';
 import { latexCompletions, symbolName } from '../lib/completions';
+import { applyFormat, type Format } from '../lib/format';
+import { FormatMenu } from './FormatMenu';
 
 // --- Symbols shown as symbols --------------------------------------------
 // "\forall " (or "\FürAlle ") shows as ∀ in the editor and is deleted with
@@ -108,9 +110,11 @@ export const Editor = forwardRef<EditorHandle, Props>(function Editor({ initialV
   tRef.current = t;
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const cbs = useRef({ onChange, onHistory });
   cbs.current = { onChange, onHistory };
 
+  const lastKey = useRef(-1e9);
   useEffect(() => {
     if (!host.current) return;
     const v = new EditorView({
@@ -125,6 +129,30 @@ export const Editor = forwardRef<EditorHandle, Props>(function Editor({ initialV
           StreamLanguage.define(stex),
           syntaxHighlighting(highlight),
           EditorView.lineWrapping,
+          // Right-click (or long-press on touch, Shift+F10, the menu key) on a selection
+          // opens the formatting menu. Without a selection the browser's own menu stays.
+          EditorView.domEventHandlers({
+            contextmenu(e, v) {
+              if (v.state.selection.main.empty) return false;
+              if (performance.now() - lastKey.current < 500) {
+                e.preventDefault(); // the keyboard already opened the menu at the caret
+                return true;
+              }
+              e.preventDefault();
+              setMenu({ x: e.clientX, y: e.clientY });
+              return true;
+            },
+            keydown(e, v) {
+              if (e.key !== 'ContextMenu' && !(e.key === 'F10' && e.shiftKey)) return false;
+              const { head, empty } = v.state.selection.main;
+              if (empty) return false;
+              e.preventDefault();
+              lastKey.current = performance.now();
+              const at = v.coordsAtPos(head);
+              setMenu({ x: at?.left ?? 16, y: at?.bottom ?? 16 });
+              return true;
+            },
+          }),
           textsBox.current.of(texts(tRef.current)),
           EditorView.updateListener.of((u) => {
             if (u.docChanged) cbs.current.onChange(u.state.doc.toString());
@@ -209,5 +237,35 @@ export const Editor = forwardRef<EditorHandle, Props>(function Editor({ initialV
     },
   }));
 
-  return <div ref={host} id="editor" />;
+  const closeMenu = useCallback(() => {
+    setMenu(null);
+    view.current?.focus();
+  }, []);
+
+  const format = useCallback(
+    (f: Format) => {
+      const v = view.current;
+      setMenu(null);
+      if (!v) return;
+      const { from, to } = v.state.selection.main;
+      const edit = applyFormat(v.state.doc.toString(), from, to, f);
+      if (edit) {
+        v.dispatch({
+          changes: { from: edit.from, to: edit.to, insert: edit.insert },
+          selection: EditorSelection.range(edit.selFrom, edit.selTo),
+          scrollIntoView: true,
+          userEvent: 'input.format',
+        });
+      }
+      v.focus();
+    },
+    [],
+  );
+
+  return (
+    <>
+      <div ref={host} id="editor" />
+      {menu && <FormatMenu x={menu.x} y={menu.y} onPick={format} onClose={closeMenu} />}
+    </>
+  );
 });

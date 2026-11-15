@@ -87,11 +87,23 @@ export function prepare(raw: string): string {
   const spaces = (run: string) => '\\ '.repeat(run.length);
   // One pass: a second pass saw the "\" of a "\ " it had just written as the
   // character before "\text" and turned it into "\\", a line break.
-  // A new line typed between words counts as a space, not as nothing.
-  const code = cleaned.replace(new RegExp(`(?<=${TEXT})[ \\n]+(?=\\S)|(?<=\\S)[ \\n]+(?=${TEXT})`, 'g'), spaces);
-  const hasBreak = /\\\\/.test(code);
-  const hasEnv = /\\begin\s*\{/.test(code);
-  return hasBreak && !hasEnv ? `\\displaylines{${code}}` : code;
+  const code = cleaned.replace(new RegExp(`(?<=${TEXT}) +(?=\\S)|(?<=\\S) +(?=${TEXT})`, 'g'), spaces);
+  return topLevelBreak(code) ? `\\displaylines{${code}}` : code;
+}
+
+/** A "\\" outside every \begin…\end: separate lines that need \displaylines. */
+function topLevelBreak(code: string): boolean {
+  let depth = 0;
+  for (let i = 0; i < code.length; i++) {
+    const rest = code.slice(i, i + 7);
+    if (rest.startsWith('\\begin')) depth++;
+    else if (rest.startsWith('\\end')) depth = Math.max(0, depth - 1);
+    else if (rest.startsWith('\\\\')) {
+      if (depth === 0) return true;
+      i++; // skip the second backslash
+    }
+  }
+  return false;
 }
 
 export function render(code: string, display = true): RenderResult {
