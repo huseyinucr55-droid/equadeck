@@ -7,34 +7,9 @@ import { defaultKeymap, history, historyKeymap, redo, redoDepth, undo, undoDepth
 import { HighlightStyle, StreamLanguage, syntaxHighlighting } from '@codemirror/language';
 import { stex } from '@codemirror/legacy-modes/mode/stex';
 import { tags } from '@lezer/highlight';
-import { autocompletion, completionKeymap, startCompletion } from '@codemirror/autocomplete';
+import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
 import { applyTemplate } from '../lib/insert';
-import { hashCommand, latexCompletions, spaceCommand, symbolName, toReadable } from '../lib/completions';
-
-// --- "für alle#" -> \forall ----------------------------------------------
-// Typing # after words that name a command replaces the words with it.
-// Unknown words keep their #; a name that fits several commands opens the list.
-// A space works too for unambiguous meanings ("integral ", "für alle ").
-const hashShortcut = EditorView.inputHandler.of((view, from, to, text) => {
-  if ((text !== '#' && text !== ' ') || from !== to) return false;
-  const line = view.state.doc.lineAt(from);
-  const before = line.text.slice(0, from - line.from);
-  const hit = text === '#' ? hashCommand(before) : spaceCommand(before);
-  if (!hit) return false;
-  const start = line.from + hit.start;
-  if ('ambiguous' in hit) {
-    startCompletion(view);
-    return true;
-  }
-  const { text: insert, cursor } = applyTemplate(toReadable(hit.tpl), '');
-  view.dispatch({
-    changes: { from: start, to, insert },
-    selection: { anchor: start + cursor },
-    scrollIntoView: true,
-    userEvent: 'input.complete',
-  });
-  return true;
-});
+import { latexCompletions, symbolName } from '../lib/completions';
 
 // --- Symbols shown as symbols --------------------------------------------
 // "\forall " (or "\FürAlle ") shows as ∀ in the editor and is deleted with
@@ -145,7 +120,6 @@ export const Editor = forwardRef<EditorHandle, Props>(function Editor({ initialV
         extensions: [
           history(),
           autocompletion({ override: [latexCompletions], icons: false }),
-          hashShortcut,
           symbols,
           keymap.of([...completionKeymap, ...defaultKeymap, ...historyKeymap]),
           StreamLanguage.define(stex),

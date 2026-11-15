@@ -76,34 +76,45 @@ test.describe('Typing made easier', () => {
     expect(await code(page)).toBe('\\in ');
   });
 
-  test('TY-6 "für alle#" and "integral" + space become symbols, deleted in one go', async ({ page }) => {
+  test('TY-6 words are text, "summe" suggests Σ, symbols delete in one go', async ({ page }) => {
     await openApp(page);
     await page.getByRole('button', { name: /Language: English/ }).click();
+    // No Text button any more: words are text by themselves.
+    await expect(page.getByRole('button', { name: 'Text', exact: true })).toHaveCount(0);
     const box = page.getByRole('textbox', { name: 'LaTeX-Quelltext' });
-    await box.click();
-    await page.keyboard.press('ControlOrMeta+a');
-    await page.keyboard.press('Delete');
-    // Two words need "#".
-    await page.keyboard.type('für alle#x element von#A');
-    expect(await code(page)).toBe('\\FürAlle x \\ElementVon A');
-    await expect(page.getByRole('img', { name: '\\forall x \\in A', exact: true })).toBeVisible();
-    // The editor shows the symbols, not the commands.
-    await expect(page.locator('.cm-symbol')).toHaveCount(2);
-    // One Backspace after "A" removes "A", the next the whole ∈.
+    const clear = async () => {
+      await box.click();
+      await page.keyboard.press('ControlOrMeta+a');
+      await page.keyboard.press('Delete');
+    };
+    await clear();
+    await page.keyboard.insertText('Seien A und B zwei  Mengen');
+    await expect(page.getByRole('img', { name: '\\text{Seien} A \\text{und} B \\text{zwei}  \\text{Mengen}', exact: true })).toBeVisible();
+
+    // A plain word opens the list with the first entry chosen; Enter takes it.
+    await clear();
+    await page.keyboard.type('summe');
+    const first = page.getByRole('option').first();
+    await expect(first).toHaveAttribute('aria-selected', 'true');
+    await expect(first).toContainText('\\Summe');
+    await page.waitForTimeout(300); // CodeMirror ignores Enter right after the list opens
+    await page.keyboard.press('Enter');
+    expect(await code(page)).toBe('\\Summe_{}^{}');
+
+    // Symbols show as symbols and one Backspace removes a whole one.
+    await clear();
+    await page.keyboard.type('x element von');
+    await expect(page.getByRole('option').first()).toContainText('\\ElementVon');
+    await page.waitForTimeout(300);
+    await page.keyboard.press('Enter');
+    expect(await code(page)).toBe('x \\ElementVon ');
+    await expect(page.locator('.cm-symbol')).toHaveCount(1);
     await page.keyboard.press('Backspace');
-    await page.keyboard.press('Backspace');
-    expect(await code(page)).toBe('\\FürAlle x ');
-    // One word: a space is enough. "kleiner" waits, it could become "kleiner gleich".
-    await page.keyboard.type('integral ');
-    expect(await code(page)).toBe('\\FürAlle x \\Integral_{}^{}');
-    await page.keyboard.press('ControlOrMeta+a');
-    await page.keyboard.press('Delete');
-    await page.keyboard.type('a kleiner b');
-    expect(await code(page)).toBe('a kleiner b');
-    // Unknown words keep their #.
-    await page.keyboard.press('ControlOrMeta+a');
-    await page.keyboard.type('hallo#');
-    expect(await code(page)).toBe('hallo#');
+    expect(await code(page)).toBe('x ');
+
+    // # is just a character again.
+    await page.keyboard.type('#');
+    expect(await code(page)).toBe('x #');
   });
 
   test('TY-4 "Keep my spaces" shows typed spaces and remembers the choice', async ({ page }) => {

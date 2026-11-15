@@ -153,7 +153,6 @@ export const GROUPS: Group[] = [
     id: 'style',
     title: 'Style',
     symbols: [
-      s('text', '\\text{#0}', '\\text{Text}', 'words roman'),
       s('bold', '\\mathbf{#0}', '\\mathbf{B}', 'boldface'),
       s('bold symbol', '\\boldsymbol{#0}', '\\boldsymbol{\\alpha}'),
       s('italic', '\\mathit{#0}', '\\mathit{I}'),

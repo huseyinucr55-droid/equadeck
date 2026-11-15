@@ -83,9 +83,11 @@ export function prepare(raw: string): string {
   // Maths mode drops spaces, so "\text{Hallo} x" rendered as "Hallox". A space
   // typed right next to a \text{…} block is meant to show: make it "\ ".
   const TEXT = String.raw`\\text(?:bf|it|rm|sf|tt)?\s*\{[^{}]*\}`;
+  // Every typed space counts: "zwei   Mengen" keeps all three.
+  const spaces = (run: string) => '\\ '.repeat(run.length);
   const code = cleaned
-    .replace(new RegExp(`(${TEXT}) +(?=\\S)`, 'g'), '$1\\ ')
-    .replace(new RegExp(`(\\S) +(${TEXT})`, 'g'), '$1\\ $2');
+    .replace(new RegExp(`(${TEXT})( +)(?=\\S)`, 'g'), (_m, t: string, run: string) => t + spaces(run))
+    .replace(new RegExp(`(\\S)( +)(${TEXT})`, 'g'), (_m, c: string, run: string, t: string) => c + spaces(run) + t);
   const hasBreak = /\\\\/.test(code);
   const hasEnv = /\\begin\s*\{/.test(code);
   return hasBreak && !hasEnv ? `\\displaylines{${code}}` : code;

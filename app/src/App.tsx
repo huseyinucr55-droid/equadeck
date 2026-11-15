@@ -23,7 +23,7 @@ const AUTO_DOWNLOAD_MS = 3000;
 import { APP_NAME } from './brand';
 import { to } from './lib/paths';
 import { DEFAULT_INPUT, toLatex, type InputOptions } from './lib/typing';
-import { setReadableCommands, setSpaceWords, toReadable } from './lib/completions';
+import { setReadableCommands, toReadable } from './lib/completions';
 
 const DRAFT_KEY = 'lx.draft.v1';
 const SEED = 'f(x) = \\int_{-\\infty}^{\\infty} \\hat{f}(\\xi)\\, e^{2\\pi i \\xi x}\\, d\\xi';
@@ -113,9 +113,7 @@ export default function App() {
   const toastTimer = useRef<number | undefined>(undefined);
   const { theme, next: nextTheme } = useTheme();
   const [input, setInput] = useInputOptions();
-  useEffect(() => setReadableCommands(input.readable), [input.readable]);
-  useEffect(() => setSpaceWords(input.words), [input.words]);
-  // What gets rendered and copied: the typed code with shortcuts and spaces applied.
+  useEffect(() => setReadableCommands(input.readable), [input.readable]);  // What gets rendered and copied: the typed code with shortcuts and spaces applied.
   const latex = useMemo(() => toLatex(code, input), [code, input]);
 
   const validSize = Number.isFinite(fontSize) && fontSize >= FONT_MIN && fontSize <= FONT_MAX;
@@ -282,7 +280,6 @@ export default function App() {
               <Redo2 aria-hidden className="size-4" />
             </IconButton>
             <span aria-hidden className="mx-1 h-5 w-px bg-border" />
-            <Button variant="ghost" size="sm" onMouseDown={keepSelection} onClick={() => insert('\\text{#0}')}>{t('Text')}</Button>
             <Button variant="ghost" size="sm" onMouseDown={keepSelection} onClick={() => insert('\\mathbf{#0}')}>{t('Bold')}</Button>
             <Button variant="ghost" size="sm" onMouseDown={keepSelection} onClick={() => insert('\\displaystyle ')}>{t('Display')}</Button>
             <Button variant="ghost" size="sm" icon={<Grid3x3 aria-hidden className="size-4" />} onClick={() => setPanel('matrix')}>{t('Matrix')}</Button>
@@ -330,8 +327,8 @@ export default function App() {
                 {t('Readable commands (\\ElementOf instead of \\in)')}
               </label>
               <label className="flex cursor-pointer items-center gap-2">
-                <input type="checkbox" className="size-4 accent-[var(--lx-accent)]" checked={input.words} onChange={(e) => setInput({ words: e.target.checked })} />
-                {t('Words become symbols (integral + space, for all#)')}
+                <input type="checkbox" className="size-4 accent-[var(--lx-accent)]" checked={input.wordsAsText} onChange={(e) => setInput({ wordsAsText: e.target.checked })} />
+                {t('Words as text (no \\text needed)')}
               </label>
             </div>
           </div>

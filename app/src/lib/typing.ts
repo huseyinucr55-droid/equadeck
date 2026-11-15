@@ -11,11 +11,11 @@ export type InputOptions = {
   spaces: boolean;
   /** Autocomplete inserts readable names (\ElementVon) instead of LaTeX ones (\in). */
   readable: boolean;
-  /** One word plus space ("integral ") becomes its symbol; "#" always works. */
-  words: boolean;
+  /** Words of 2+ letters show as normal text with their spaces, no \text{…} needed. */
+  wordsAsText: boolean;
 };
 
-export const DEFAULT_INPUT: InputOptions = { shortcuts: true, spaces: false, readable: true, words: true };
+export const DEFAULT_INPUT: InputOptions = { shortcuts: true, spaces: false, readable: true, wordsAsText: true };
 
 /** Longest first, so "<=>" wins over "<=" and "=>". */
 export const SHORTCUTS: [string, string][] = [
@@ -92,9 +92,43 @@ function applySpaces(code: string): string {
 }
 
 /** The LaTeX that gets rendered and copied. */
+// Braces whose words are names or already styled, not sentences.
+const STYLED = /\\(?:math(?:rm|bf|it|sf|tt|bb|cal|frak|scr)|boldsymbol|bm|pmb)\s*\{/g;
+
+/**
+ * "Seien A und B zwei Mengen" -> \text{Seien} A \text{und} B \text{zwei} \text{Mengen}.
+ * Words of two or more letters are text; single letters (x, A) stay maths
+ * variables, and so do differentials like dx. Spaces next to a word are kept
+ * as typed (lib/engine.ts prepare()).
+ */
+function applyWords(code: string): string {
+  const ranges = [...protectedRanges(code), ...[...code.matchAll(STYLED)].map((m) => braceRange(code, (m.index ?? 0) + m[0].length - 1))];
+  return code.replace(/[A-Za-zÄÖÜäöüß]{2,}/g, (word, at: number) => {
+    if (code[at - 1] === '\\') return word; // a command name: \frac, \FürAlle
+    if (inside(ranges, at)) return word;
+    if (/^d[A-Za-z]$/.test(word)) return word; // dx, dt
+    const before = code.slice(0, at);
+    if (/\\begin\s*\{[^{}]*\}\s*\{[^{}]*$/.test(before)) return word; // {cc} of an array
+    if (/\\[A-Za-z]+\s*\[[^\]]*$/.test(before)) return word; // \bbox[yellow], \xrightarrow[over]
+    return `\\text{${word}}`;
+  });
+}
+
+/** [open, close] of the brace group opening at `open`. */
+function braceRange(code: string, open: number): [number, number] {
+  let depth = 0;
+  for (let i = open; i < code.length; i++) {
+    if (code[i] === '\\') i++;
+    else if (code[i] === '{') depth++;
+    else if (code[i] === '}' && --depth === 0) return [open, i + 1];
+  }
+  return [open, code.length];
+}
+
 export function toLatex(code: string, opts: InputOptions): string {
   // Readable commands (\ElementVon, \Bruch) always work, whatever the options.
   let out = resolveAliases(code);
+  if (opts.wordsAsText) out = applyWords(out);
   if (opts.shortcuts) out = applyShortcuts(out);
   if (opts.spaces) out = applySpaces(out);
   return out;

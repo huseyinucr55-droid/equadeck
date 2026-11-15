@@ -191,71 +191,6 @@ function matches(q: string, nameToo: boolean): Completion[] {
 // Inside \text{…} or \ce{…} words are words, not commands.
 const IN_TEXT = /\\(?:text\w*|mbox|ce|pu|operatorname)\s*\{[^{}]*$/;
 
-/** Commands whose meaning or name is exactly `phrase`: "für alle", "Element von", "pi". */
-function commandsFor(phrase: string): Cmd[] {
-  const q = norm(phrase);
-  if (!q) return [];
-  const hits = COMMANDS.filter(
-    (c) => norm(c.name) === q || norm(c.meaning) === q || norm(tr(c.meaning, 'de')) === q,
-  );
-  // Two commands with the same template count once.
-  return hits.filter((c, i) => hits.findIndex((d) => d.tpl === c.tpl) === i);
-}
-
-export type HashHit = { start: number; tpl: string } | { start: number; ambiguous: true } | null;
-
-/**
- * "für alle#": the words right before the cursor that name a command.
- * The longest phrase wins ("kleiner gleich" before "gleich"). `before` is the
- * line up to the cursor; `start` is where the phrase begins in it.
- */
-export function hashCommand(before: string): HashHit {
-  if (IN_TEXT.test(before)) return null;
-  const words = new RegExp(`(?:^|[^\\\\${LETTERS}])((?:[${LETTERS}]+ +){0,3}[${LETTERS}]+)$`).exec(before);
-  if (!words) return null;
-  const parts = words[1].split(/ +/);
-  for (let i = 0; i < parts.length; i++) {
-    const phrase = parts.slice(i).join(' ');
-    let found = commandsFor(phrase);
-    if (!found.length) continue;
-    // "pi" is \pi, "Pi" is \Pi: an exact name match settles it.
-    const exact = found.filter((c) => c.name === phrase);
-    if (exact.length === 1) found = exact;
-    // Where this phrase starts (spaces between its words may repeat).
-    const start = before.search(new RegExp(`${parts.slice(i).join(' +')}$`));
-    return found.length === 1 ? { start, tpl: found[0].tpl } : { start, ambiguous: true };
-  }
-  return null;
-}
-
-let spaceWords = true;
-/** Whether a space after a symbol's name ("integral ") turns it into the symbol, like "#". */
-export function setSpaceWords(on: boolean) {
-  spaceWords = on;
-}
-
-/**
- * Like hashCommand, for a space: only one-word meanings of 4+ letters
- * ("integral", "summe"), never bare LaTeX names ("in", "to"), and only when no
- * longer meaning could still follow ("kleiner" waits for "kleiner gleich").
- */
-export function spaceCommand(before: string): { start: number; tpl: string } | null {
-  if (!spaceWords) return null;
-  const hit = hashCommand(before);
-  if (!hit || 'ambiguous' in hit) return null;
-  const phrase = before.slice(hit.start);
-  // One word with a space; two or more words need "#" ("für alle#").
-  if (/\s/.test(phrase.trim())) return null;
-  const q = norm(phrase);
-  if (q.length < 4) return null;
-  const meaningOnly = COMMANDS.some((c) => c.tpl === hit.tpl && (norm(c.meaning) === q || norm(tr(c.meaning, 'de')) === q));
-  if (!meaningOnly) return null;
-  const longer = COMMANDS.some((c) =>
-    [norm(c.meaning), norm(tr(c.meaning, 'de'))].some((m) => m.length > q.length && m.startsWith(q)),
-  );
-  return longer ? null : hit;
-}
-
 /** Real names of plain symbols: the ones inserted as "\forall " with no arguments. */
 const SYMBOLS = new Set(COMMANDS.filter((c) => /^\\[a-zA-Z]+ $/.test(c.tpl)).map((c) => c.name));
 
@@ -284,7 +219,7 @@ export function latexCompletions(ctx: CompletionContext): CompletionResult | nul
   const parts = words[1].split(' ');
   for (let i = 0; i < parts.length; i++) {
     const phrase = parts.slice(i).join(' ');
-    if (norm(phrase).length < 4) continue; // "sin", "von": too short to mean a symbol
+    if (norm(phrase).length < 3) continue; // "in", "ab": too short to mean a symbol
     const options = matches(norm(phrase), false).filter((o) => (o.boost ?? 0) >= 60);
     if (options.length) return { from: ctx.pos - phrase.length, options, filter: false };
   }
