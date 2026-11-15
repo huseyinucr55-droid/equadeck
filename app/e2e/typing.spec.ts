@@ -90,6 +90,16 @@ test.describe('Typing made easier', () => {
     await clear();
     await page.keyboard.insertText('Seien A und B zwei  Mengen');
     await expect(page.getByRole('img', { name: '\\text{Seien} A \\text{und} B \\text{zwei}  \\text{Mengen}', exact: true })).toBeVisible();
+    // One line, side by side: two words in a row once became a line break.
+    const rendered = () => expect(page.getByRole('button', { name: 'PNG herunterladen' })).toBeEnabled();
+    await page.keyboard.insertText(' mit');
+    await rendered();
+    const oneLine = await page.locator('section[aria-label="Vorschau"] svg').first().evaluate((s) => s.getBoundingClientRect().height);
+    await clear();
+    await page.keyboard.insertText('Seien');
+    await rendered();
+    const word = await page.locator('section[aria-label="Vorschau"] svg').first().evaluate((s) => s.getBoundingClientRect().height);
+    expect(oneLine).toBeLessThan(word * 1.5);
 
     // A plain word opens the list with the first entry chosen; Enter takes it.
     await clear();

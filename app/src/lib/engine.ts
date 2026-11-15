@@ -85,9 +85,10 @@ export function prepare(raw: string): string {
   const TEXT = String.raw`\\text(?:bf|it|rm|sf|tt)?\s*\{[^{}]*\}`;
   // Every typed space counts: "zwei   Mengen" keeps all three.
   const spaces = (run: string) => '\\ '.repeat(run.length);
-  const code = cleaned
-    .replace(new RegExp(`(${TEXT})( +)(?=\\S)`, 'g'), (_m, t: string, run: string) => t + spaces(run))
-    .replace(new RegExp(`(\\S)( +)(${TEXT})`, 'g'), (_m, c: string, run: string, t: string) => c + spaces(run) + t);
+  // One pass: a second pass saw the "\" of a "\ " it had just written as the
+  // character before "\text" and turned it into "\\", a line break.
+  // A new line typed between words counts as a space, not as nothing.
+  const code = cleaned.replace(new RegExp(`(?<=${TEXT})[ \\n]+(?=\\S)|(?<=\\S)[ \\n]+(?=${TEXT})`, 'g'), spaces);
   const hasBreak = /\\\\/.test(code);
   const hasEnv = /\\begin\s*\{/.test(code);
   return hasBreak && !hasEnv ? `\\displaylines{${code}}` : code;
