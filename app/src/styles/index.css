@@ -46,6 +46,9 @@ body {
 .cm-editor.cm-focused .cm-selectionBackground,
 .cm-editor ::selection { background: var(--lx-color-accent-soft) !important; }
 .cm-editor .cm-placeholder { color: var(--lx-color-text-muted); }
+/* "\forall " shown as ∀ (Editor.tsx): the symbol plus the space it replaces. */
+.cm-editor .cm-symbol { display: inline-block; margin: 0 0.3em 0 0.05em; color: var(--lx-color-accent); font-size: 1.1em; }
+.cm-editor .cm-symbol svg { vertical-align: -0.2em; }
 
 /* Autocomplete popup. */
 .cm-tooltip.cm-tooltip-autocomplete {

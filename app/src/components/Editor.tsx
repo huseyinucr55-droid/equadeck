@@ -1,14 +1,101 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
-import { Compartment, EditorSelection, EditorState } from '@codemirror/state';
+import { Compartment, EditorSelection, EditorState, RangeSetBuilder, StateEffect } from '@codemirror/state';
 import { useT, type TFn } from '../lib/i18n';
-import { EditorView, keymap, placeholder } from '@codemirror/view';
+import { Decoration, EditorView, ViewPlugin, WidgetType, keymap, placeholder, type DecorationSet, type ViewUpdate } from '@codemirror/view';
+import { useEngine } from '../lib/mathjax';
 import { defaultKeymap, history, historyKeymap, redo, redoDepth, undo, undoDepth } from '@codemirror/commands';
 import { HighlightStyle, StreamLanguage, syntaxHighlighting } from '@codemirror/language';
 import { stex } from '@codemirror/legacy-modes/mode/stex';
 import { tags } from '@lezer/highlight';
-import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
+import { autocompletion, completionKeymap, startCompletion } from '@codemirror/autocomplete';
 import { applyTemplate } from '../lib/insert';
-import { latexCompletions } from '../lib/completions';
+import { hashCommand, latexCompletions, spaceCommand, symbolName, toReadable } from '../lib/completions';
+
+// --- "für alle#" -> \forall ----------------------------------------------
+// Typing # after words that name a command replaces the words with it.
+// Unknown words keep their #; a name that fits several commands opens the list.
+// A space works too for unambiguous meanings ("integral ", "für alle ").
+const hashShortcut = EditorView.inputHandler.of((view, from, to, text) => {
+  if ((text !== '#' && text !== ' ') || from !== to) return false;
+  const line = view.state.doc.lineAt(from);
+  const before = line.text.slice(0, from - line.from);
+  const hit = text === '#' ? hashCommand(before) : spaceCommand(before);
+  if (!hit) return false;
+  const start = line.from + hit.start;
+  if ('ambiguous' in hit) {
+    startCompletion(view);
+    return true;
+  }
+  const { text: insert, cursor } = applyTemplate(toReadable(hit.tpl), '');
+  view.dispatch({
+    changes: { from: start, to, insert },
+    selection: { anchor: start + cursor },
+    scrollIntoView: true,
+    userEvent: 'input.complete',
+  });
+  return true;
+});
+
+// --- Symbols shown as symbols --------------------------------------------
+// "\forall " (or "\FürAlle ") shows as ∀ in the editor and is deleted with
+// one Backspace. The text underneath stays LaTeX, so copying still works.
+let drawLabel: ((tex: string) => string) | null = null;
+const redrawSymbols = StateEffect.define<null>();
+
+class SymbolWidget extends WidgetType {
+  constructor(
+    readonly svg: string,
+    readonly source: string,
+  ) {
+    super();
+  }
+  eq(other: SymbolWidget) {
+    return other.svg === this.svg;
+  }
+  toDOM() {
+    const el = document.createElement('span');
+    el.className = 'cm-symbol';
+    el.title = this.source;
+    el.innerHTML = this.svg;
+    return el;
+  }
+}
+
+function symbolDecorations(view: EditorView): DecorationSet {
+  const out = new RangeSetBuilder<Decoration>();
+  if (!drawLabel) return out.finish();
+  for (const { from, to } of view.visibleRanges) {
+    const text = view.state.doc.sliceString(from, to);
+    // A command followed by a space: it is finished, so show what it means.
+    for (const m of text.matchAll(/\\([A-Za-zÄÖÜäöüß]+) /g)) {
+      const at = from + (m.index ?? 0);
+      if (text[(m.index ?? 0) - 1] === '\\') continue; // "\\in" is a line break, then "in"
+      const real = symbolName(m[1]);
+      const svg = real && drawLabel(`\\${real}`);
+      if (svg) out.add(at, at + m[0].length, Decoration.replace({ widget: new SymbolWidget(svg, m[0].trim()) }));
+    }
+  }
+  return out.finish();
+}
+
+const symbols = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = symbolDecorations(view);
+    }
+    update(u: ViewUpdate) {
+      if (u.docChanged || u.viewportChanged || u.transactions.some((t) => t.effects.some((e) => e.is(redrawSymbols)))) {
+        this.decorations = symbolDecorations(u.view);
+      }
+    }
+  },
+  {
+    decorations: (p) => p.decorations,
+    // Atomic: the cursor jumps over a symbol and Backspace removes all of it.
+    provide: (p) => EditorView.atomicRanges.of((view) => view.plugin(p)?.decorations ?? Decoration.none),
+  },
+);
 
 export type EditorHandle = {
   insertTemplate: (tpl: string) => void;
@@ -58,6 +145,8 @@ export const Editor = forwardRef<EditorHandle, Props>(function Editor({ initialV
         extensions: [
           history(),
           autocompletion({ override: [latexCompletions], icons: false }),
+          hashShortcut,
+          symbols,
           keymap.of([...completionKeymap, ...defaultKeymap, ...historyKeymap]),
           StreamLanguage.define(stex),
           syntaxHighlighting(highlight),
@@ -73,6 +162,8 @@ export const Editor = forwardRef<EditorHandle, Props>(function Editor({ initialV
       }),
     });
     view.current = v;
+    // Tests read the real text through this (the screen shows symbols instead).
+    (host.current as HTMLDivElement & { lxDoc?: () => string }).lxDoc = () => v.state.doc.toString();
     return () => {
       v.destroy();
       view.current = null;
@@ -84,6 +175,13 @@ export const Editor = forwardRef<EditorHandle, Props>(function Editor({ initialV
   useEffect(() => {
     view.current?.dispatch({ effects: textsBox.current.reconfigure(texts(t)) });
   }, [t]);
+
+  // Symbols are drawn by MathJax, which loads after the editor.
+  const engine = useEngine();
+  useEffect(() => {
+    drawLabel = engine ? engine.renderLabel : null;
+    view.current?.dispatch({ effects: redrawSymbols.of(null) });
+  }, [engine]);
 
   useEffect(() => {
     if (describedBy) view.current?.contentDOM.setAttribute('aria-describedby', describedBy);

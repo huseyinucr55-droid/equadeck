@@ -11,9 +11,11 @@ export type InputOptions = {
   spaces: boolean;
   /** Autocomplete inserts readable names (\ElementVon) instead of LaTeX ones (\in). */
   readable: boolean;
+  /** One word plus space ("integral ") becomes its symbol; "#" always works. */
+  words: boolean;
 };
 
-export const DEFAULT_INPUT: InputOptions = { shortcuts: true, spaces: false, readable: true };
+export const DEFAULT_INPUT: InputOptions = { shortcuts: true, spaces: false, readable: true, words: true };
 
 /** Longest first, so "<=>" wins over "<=" and "=>". */
 export const SHORTCUTS: [string, string][] = [

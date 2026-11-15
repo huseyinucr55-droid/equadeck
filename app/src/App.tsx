@@ -23,7 +23,7 @@ const AUTO_DOWNLOAD_MS = 3000;
 import { APP_NAME } from './brand';
 import { to } from './lib/paths';
 import { DEFAULT_INPUT, toLatex, type InputOptions } from './lib/typing';
-import { setReadableCommands, toReadable } from './lib/completions';
+import { setReadableCommands, setSpaceWords, toReadable } from './lib/completions';
 
 const DRAFT_KEY = 'lx.draft.v1';
 const SEED = 'f(x) = \\int_{-\\infty}^{\\infty} \\hat{f}(\\xi)\\, e^{2\\pi i \\xi x}\\, d\\xi';
@@ -114,6 +114,7 @@ export default function App() {
   const { theme, next: nextTheme } = useTheme();
   const [input, setInput] = useInputOptions();
   useEffect(() => setReadableCommands(input.readable), [input.readable]);
+  useEffect(() => setSpaceWords(input.words), [input.words]);
   // What gets rendered and copied: the typed code with shortcuts and spaces applied.
   const latex = useMemo(() => toLatex(code, input), [code, input]);
 
@@ -327,6 +328,10 @@ export default function App() {
               <label className="flex cursor-pointer items-center gap-2">
                 <input type="checkbox" className="size-4 accent-[var(--lx-accent)]" checked={input.readable} onChange={(e) => setInput({ readable: e.target.checked })} />
                 {t('Readable commands (\\ElementOf instead of \\in)')}
+              </label>
+              <label className="flex cursor-pointer items-center gap-2">
+                <input type="checkbox" className="size-4 accent-[var(--lx-accent)]" checked={input.words} onChange={(e) => setInput({ words: e.target.checked })} />
+                {t('Words become symbols (integral + space, for all#)')}
               </label>
             </div>
           </div>

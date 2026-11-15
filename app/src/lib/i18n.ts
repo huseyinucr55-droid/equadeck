@@ -507,6 +507,7 @@ const DE: Record<string, string> = {
   'ket': 'Ket', 'bra': 'Bra',
   'dot accent': 'Punkt darüber', 'colour from here': 'Farbe ab hier',
   'Readable commands (\\ElementOf instead of \\in)': 'Lesbare Befehle (\\ElementVon statt \\in)',
+  'Words become symbols (integral + space, for all#)': 'Wörter werden Zeichen (integral + Leertaste, für alle#)',
 };
 
 const KEY = 'lx.lang';

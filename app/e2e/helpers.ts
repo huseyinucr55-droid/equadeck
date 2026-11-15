@@ -45,11 +45,9 @@ export async function setCode(page: Page, text: string) {
   await page.keyboard.press('Escape');
 }
 
+/** The editor's real text (the screen shows symbols like ∀ in place of "\forall "). */
 export async function code(page: Page) {
-  return page.evaluate(() => {
-    const lines = [...document.querySelectorAll('.cm-content .cm-line')].map((l) => l.textContent ?? '');
-    return lines.join('\n');
-  });
+  return page.evaluate(() => (document.getElementById('editor') as HTMLElement & { lxDoc: () => string }).lxDoc());
 }
 
 /** Wait until the preview matches the code (export buttons enable). */
