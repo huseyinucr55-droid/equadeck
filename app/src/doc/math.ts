@@ -18,6 +18,7 @@ export const TEMPLATES = {
   fraction: '\\frac{#?}{#?}',
   root: '\\sqrt{#?}',
   power: '#?^{#?}',
+  index: '#?_{#?}',
   integral: '\\int_{#?}^{#?}#?\\,\\mathrm{d}x',
   sum: '\\sum_{#?}^{#?}#?',
   limit: '\\lim_{#?\\to#?}#?',
@@ -35,6 +36,12 @@ export function textOnly(latex: string): string | null {
   if (rest) return null;
   const words = [...latex.matchAll(/\\text\{([^{}]*)\}/g)].map((m) => m[1]).join('');
   return words.replace(/\\textbackslash /g, '\\').replace(/\s+/g, ' ').trim();
+}
+
+/** A rows × cols matrix of boxes, with ( ), [ ] or | | around it. */
+export function matrixLatex(rows: number, cols: number, kind: 'pmatrix' | 'bmatrix' | 'vmatrix' = 'pmatrix'): string {
+  const row = Array.from({ length: cols }, () => '#?').join('&');
+  return `\\begin{${kind}}${Array.from({ length: rows }, () => row).join('\\\\')}\\end{${kind}}`;
 }
 
 /** The formula the user is typing in right now, if any. */
@@ -176,6 +183,31 @@ function makeNode(name: 'mathInline' | 'mathBlock', display: boolean) {
             leave(true);
           }
         });
+        // Backspace at the very start of a formula (Delete at its end): an empty
+        // formula goes away; otherwise you are back in the text and the letter
+        // before (after) the formula is deleted, as you'd expect.
+        mf.addEventListener(
+          'keydown',
+          (e) => {
+            const back = e.key === 'Backspace';
+            if ((!back && e.key !== 'Delete') || !mf.selectionIsCollapsed) return;
+            const atEdge = back ? mf.position === 0 : mf.position === mf.lastOffset;
+            if (!atEdge) return;
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            const empty = !mf.getValue('latex').trim();
+            leave(!back);
+            if (empty || display) return;
+            editor.commands.command(({ tr, state }) => {
+              const $p = state.selection.$from;
+              const neighbour = back ? $p.nodeBefore : $p.nodeAfter;
+              if (!neighbour?.isText) return false;
+              tr.delete(back ? $p.pos - 1 : $p.pos, back ? $p.pos : $p.pos + 1);
+              return true;
+            });
+          },
+          { capture: true },
+        );
 
         return {
           dom,
@@ -238,9 +270,45 @@ function makeNode(name: 'mathInline' | 'mathBlock', display: boolean) {
         // Arrow into a formula from the text.
         ArrowRight: () => enterAdjacent(this.editor, true),
         ArrowLeft: () => enterAdjacent(this.editor, false),
+        // One key press removes a formula, page break or line next to the cursor
+        // (the editor's default first selects it and needs a second press).
+        Backspace: () => deleteAdjacentAtom(this.editor, false),
+        Delete: () => deleteAdjacentAtom(this.editor, true),
       };
     },
   });
+}
+
+const ATOMS = new Set(['mathInline', 'mathBlock', 'pageBreak', 'horizontalRule']);
+
+/**
+ * Backspace (or Delete) right next to a formula, page break or line removes it
+ * at once. Inline formulas sit in the text; block ones (own-line formula, page
+ * break, line) are the block before (after) the paragraph the cursor starts
+ * (ends).
+ */
+function deleteAdjacentAtom(editor: Editor, forward: boolean): boolean {
+  const { state, view } = editor;
+  const { selection } = state;
+  if (!selection.empty) return false;
+  const $pos = selection.$from;
+  // In the text: the inline node just before / after the cursor.
+  const inline = forward ? $pos.nodeAfter : $pos.nodeBefore;
+  if (inline && ATOMS.has(inline.type.name)) {
+    const from = forward ? $pos.pos : $pos.pos - inline.nodeSize;
+    view.dispatch(state.tr.delete(from, from + inline.nodeSize).scrollIntoView());
+    return true;
+  }
+  // At the start (end) of a paragraph: the block before (after) it.
+  const atEdge = forward ? $pos.parentOffset === $pos.parent.content.size : $pos.parentOffset === 0;
+  if (!atEdge || $pos.depth < 1) return false;
+  const blockPos = forward ? $pos.after() : $pos.before();
+  const $block = state.doc.resolve(blockPos);
+  const neighbour = forward ? $block.nodeAfter : $block.nodeBefore;
+  if (!neighbour || !ATOMS.has(neighbour.type.name)) return false;
+  const from = forward ? blockPos : blockPos - neighbour.nodeSize;
+  view.dispatch(state.tr.delete(from, from + neighbour.nodeSize).scrollIntoView());
+  return true;
 }
 
 /** With the cursor right next to a formula, an arrow key steps into it. */

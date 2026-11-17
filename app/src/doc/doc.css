@@ -66,21 +66,40 @@
   padding: 0.35rem 0.5rem 0.1rem;
   border-radius: 8px;
   background: var(--lx-color-surface);
-  overflow-x: auto;
-  /* A fade on the right says "more to the side" on narrow screens. */
-  mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
-  padding-right: 24px;
+  /* Groups that don't fit move to a second row instead of being cut off. */
+  flex-wrap: wrap;
+  row-gap: 0.35rem;
 }
+/* Matrix size picker (Insert tab). */
+.ribbon-matrix {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 4px);
+  left: 0;
+  padding: 0.6rem;
+  border: 1px solid var(--lx-color-border);
+  border-radius: 8px;
+  background: var(--lx-color-bg);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2);
+}
+.ribbon-matrix-grid { display: grid; gap: 3px; width: 9.5rem; }
+.ribbon-matrix-cell { aspect-ratio: 1; border: 1px solid var(--lx-color-border-input); border-radius: 2px; background: var(--lx-color-bg); padding: 0; cursor: pointer; }
+.ribbon-matrix-cell.is-on { background: var(--lx-color-accent-soft); border-color: var(--lx-color-accent); }
+.ribbon-matrix-cell:focus-visible { outline: 2px solid var(--lx-color-focus); }
+@media (pointer: coarse) { .ribbon-matrix-grid { width: 15rem; } }
 .ribbon-group {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   padding: 0 0.5rem;
   border-right: 1px solid var(--lx-color-border);
-  flex-shrink: 0;
+  flex-shrink: 1;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .ribbon-group:last-child { border-right: 0; }
-.ribbon-group-row { display: flex; align-items: center; gap: 0.15rem; min-height: 2.25rem; }
+/* A long group (24 symbols) wraps inside itself on narrow screens. */
+.ribbon-group-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.15rem; min-height: 2.25rem; }
 .ribbon-group-label { font-size: 0.7rem; color: var(--lx-color-text-muted); text-align: center; padding: 0.1rem 0; }
 .ribbon-btn {
   display: inline-flex;

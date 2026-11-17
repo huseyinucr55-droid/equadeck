@@ -135,7 +135,7 @@ test.describe('Document view', () => {
     expect(await fields(page)).toEqual(['a^2+b^2']);
   });
 
-  test('DOC-9 Insert tab: fraction with boxes, symbols, a formula on its own line', async ({ page }) => {
+  test('DOC-9 Insert tab: fraction with boxes, symbols, index', async ({ page }) => {
     await openDoc(page);
     await body(page).click();
     await tab(page, 'Insert').click();
@@ -150,10 +150,13 @@ test.describe('Document view', () => {
     await page.getByRole('button', { name: 'element of', exact: true }).click();
     expect(await fields(page)).toEqual(['\\frac12\\in']);
     await page.keyboard.press('Escape');
-    await page.getByRole('button', { name: 'On its own line' }).click();
-    await expect(page.locator('.doc-math-block math-field')).toBeFocused();
-    await page.keyboard.type('x');
-    await expect(page.locator('.doc-math-block')).toHaveCount(1);
+    // Index (subscript) next to Power: a new formula x_n with boxes.
+    await expect(page.getByRole('button', { name: 'Formula', exact: true })).toHaveCount(0);
+    await page.getByRole('group', { name: 'Structures' }).getByRole('button', { name: 'Index' }).click();
+    await page.keyboard.type('a');
+    await page.keyboard.press('Tab');
+    await page.keyboard.type('n');
+    expect((await fields(page))[1]).toBe('a_{n}');
   });
 
   test('DOC-10 German words inside a formula become symbols', async ({ page }) => {
@@ -320,6 +323,88 @@ test.describe('Document view', () => {
     await page.keyboard.press('End');
     await page.keyboard.type(' summe');
     await expect(list).toHaveCount(0);
+  });
+
+  test('DOC-20 deleting: one Backspace removes a formula; Backspace at a formula start deletes the letter before', async ({ page }) => {
+    await page.addInitScript(() => {
+      const content = {
+        type: 'doc',
+        content: [
+          { type: 'paragraph', content: [{ type: 'text', text: 'ab' }, { type: 'mathInline', attrs: { latex: 'x^2' } }, { type: 'text', text: 'cd' }] },
+          { type: 'mathBlock', attrs: { latex: '\\frac12' } },
+          { type: 'paragraph', content: [{ type: 'text', text: 'Ende' }] },
+        ],
+      };
+      localStorage.setItem('lx.docs.v1', JSON.stringify([{ id: 'd', title: 'Del', updatedAt: 1, content, paper: 'blank', margins: 'normal', orientation: 'portrait' }]));
+      localStorage.setItem('lx.docs.current', 'd');
+    });
+    await page.goto('/doc');
+    await expect(page.locator('.doc-math math-field')).toHaveCount(2);
+    // Cursor right after the inline formula ("|cd"): one Backspace removes it.
+    await page.locator('.doc-content p').first().click({ position: { x: 2, y: 5 } });
+    await page.keyboard.press('Home');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight'); // after "ab", next to the formula
+    await page.keyboard.press('Delete'); // one Delete removes the formula after the cursor
+    await expect(page.locator('.doc-math-inline')).toHaveCount(0);
+    await expect(page.locator('.doc-content p').first()).toHaveText('abcd');
+    // At the start of "Ende": one Backspace removes the own-line formula before it.
+    await page.locator('.doc-content p').last().click();
+    await page.keyboard.press('Home');
+    await page.keyboard.press('Backspace');
+    await expect(page.locator('.doc-math-block')).toHaveCount(0);
+    // Backspace at the very start of a formula deletes the letter before it.
+    await page.keyboard.press('End');
+    await page.keyboard.insertText(' x');
+    await page.keyboard.press('Alt+Equal');
+    await expect(page.locator('.doc-math-inline math-field')).toBeFocused();
+    await page.waitForTimeout(150);
+    await page.keyboard.type('y');
+    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('Backspace');
+    await expect(page.locator('.doc-content p').last()).toContainText('Ende ');
+    await expect(page.locator('.doc-content p').last()).not.toContainText('Ende x');
+    expect(await fields(page)).toEqual(['y']);
+  });
+
+  test('DOC-21 matrix: pick the size, add a row; the ribbon wraps instead of cutting off', async ({ page }) => {
+    await openDoc(page);
+    await body(page).click();
+    await tab(page, 'Insert').click();
+    await page.getByRole('group', { name: 'Matrix' }).getByRole('button', { name: 'Matrix' }).click();
+    await page.getByRole('dialog', { name: 'Matrix size' }).getByRole('button', { name: '[ ]' }).click();
+    await page.getByRole('button', { name: '3 × 4' }).click();
+    await expect(page.locator('.doc-math math-field').last()).toBeFocused();
+    const v = (await fields(page))[0];
+    expect(v.startsWith('\\begin{bmatrix}')).toBe(true);
+    expect(v.split('\\\\').length).toBe(3); // 3 rows
+    await page.getByRole('group', { name: 'Matrix' }).getByRole('button', { name: 'Row below' }).click();
+    expect((await fields(page))[0].split('\\\\').length).toBe(4);
+    // Nothing in the ribbon is cut off: every group is fully inside the window.
+    await page.setViewportSize({ width: 820, height: 900 });
+    const cut = await page.evaluate(() =>
+      [...document.querySelectorAll('.ribbon-group')].filter((g) => g.getBoundingClientRect().right > window.innerWidth + 1).length,
+    );
+    expect(cut).toBe(0);
+  });
+
+  test('DOC-22 select text across a formula with the mouse and delete it', async ({ page }) => {
+    await page.addInitScript(() => {
+      const content = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Anfang ' }, { type: 'mathInline', attrs: { latex: 'a+b' } }, { type: 'text', text: ' Schluss' }] }] };
+      localStorage.setItem('lx.docs.v1', JSON.stringify([{ id: 's', title: 'Sel', updatedAt: 1, content, paper: 'blank', margins: 'normal', orientation: 'portrait' }]));
+      localStorage.setItem('lx.docs.current', 's');
+    });
+    await page.goto('/doc');
+    const p = page.locator('.doc-content p').first();
+    await expect(page.locator('.doc-math math-field')).toHaveCount(1);
+    const box = (await p.boundingBox())!;
+    await page.mouse.move(box.x + 1, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width - 1, box.y + box.height / 2, { steps: 12 });
+    await page.mouse.up();
+    await page.keyboard.press('Backspace');
+    await expect(page.locator('.doc-math')).toHaveCount(0);
+    await expect(p).not.toContainText('Anfang');
   });
 
   test('DOC-15 tables: insert, add a row, delete', async ({ page }) => {

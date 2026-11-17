@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useT } from '../lib/i18n';
 import type { Doc, Margins, Orientation, Paper } from './store';
-import { TEMPLATES, activeMathField } from './math';
+import { TEMPLATES, activeMathField, matrixLatex } from './math';
 import type { TemplateKind } from './templates';
 
 export const TEXT_COLOURS = ['#000000', '#c92a2a', '#1864ab', '#2b8a3e', '#e8590c', '#7048e8', '#868e96', '#0b7285'];
@@ -30,10 +30,10 @@ const STRUCTURES: [keyof typeof TEMPLATES, string, string][] = [
   ['fraction', 'Fraction', '½'],
   ['root', 'Root', '√'],
   ['power', 'Power', 'xⁿ'],
+  ['index', 'Index', 'xₙ'],
   ['integral', 'Integral', '∫'],
   ['sum', 'Sum', 'Σ'],
   ['limit', 'Limit', 'lim'],
-  ['matrix', 'Matrix', '[ ]'],
   ['cases', 'Cases', '{'],
 ];
 
@@ -144,6 +144,53 @@ function Swatches({ label, colours, onPick, onClear, clearLabel }: {
   );
 }
 
+type MatrixKind = 'pmatrix' | 'bmatrix' | 'vmatrix';
+
+/** Pick a matrix size on a grid, like a table in a word processor, and its brackets. */
+function MatrixPicker({ onPick }: { onPick: (rows: number, cols: number, kind: MatrixKind) => void }) {
+  const t = useT();
+  const [hover, setHover] = useState<[number, number]>([2, 2]);
+  const [kind, setKind] = useState<MatrixKind>('pmatrix');
+  const N = 6;
+  return (
+    <div className="ribbon-matrix" role="dialog" aria-label={t('Matrix size')}>
+      <div className="mb-2 flex gap-1" role="group" aria-label={t('Brackets')}>
+        {([
+          ['pmatrix', '( )'],
+          ['bmatrix', '[ ]'],
+          ['vmatrix', '| |'],
+        ] as [MatrixKind, string][]).map(([k, label]) => (
+          <button key={k} type="button" className="ribbon-btn ribbon-symbol" aria-pressed={kind === k} onMouseDown={keep} onClick={() => setKind(k)}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="ribbon-matrix-grid" style={{ gridTemplateColumns: `repeat(${N}, 1fr)` }}>
+        {Array.from({ length: N * N }, (_, i) => {
+          const r = Math.floor(i / N) + 1;
+          const c = (i % N) + 1;
+          const on = r <= hover[0] && c <= hover[1];
+          return (
+            <button
+              key={i}
+              type="button"
+              className={`ribbon-matrix-cell ${on ? 'is-on' : ''}`}
+              aria-label={`${r} × ${c}`}
+              onMouseDown={keep}
+              onMouseEnter={() => setHover([r, c])}
+              onFocus={() => setHover([r, c])}
+              onClick={() => onPick(r, c, kind)}
+            />
+          );
+        })}
+      </div>
+      <div className="mt-1 text-center text-xs text-muted" aria-live="polite">
+        {t('{rows} rows × {cols} columns', { rows: hover[0], cols: hover[1] })}
+      </div>
+    </div>
+  );
+}
+
 export function Ribbon(p: RibbonProps) {
   const t = useT();
   const [tab, setTab] = useState<Tab>('home');
@@ -171,6 +218,15 @@ export function Ribbon(p: RibbonProps) {
   // The formula that had focus when a ribbon button was pressed (pressing it
   // can move focus away before the click arrives).
   const fieldAtPress = useRef<MathfieldElement | null>(null);
+  const [matrixOpen, setMatrixOpen] = useState(false);
+  /** Rows and columns of the matrix or cases you are typing in. */
+  const cell = (command: 'addRowAfter' | 'addColumnAfter' | 'removeRow' | 'removeColumn') => {
+    const mf = fieldAtPress.current?.isConnected ? fieldAtPress.current : activeMathField();
+    fieldAtPress.current = null;
+    if (!mf) return;
+    mf.focus();
+    mf.executeCommand(command);
+  };
   /** Into the formula you are typing in, or as a new formula at the cursor. */
   const math = (latex: string, block = false) => {
     const mf = fieldAtPress.current?.isConnected ? fieldAtPress.current : activeMathField();
@@ -317,14 +373,27 @@ export function Ribbon(p: RibbonProps) {
 
         {tab === 'insert' && (
           <>
-            <Group label={t('Formula')}>
-              <Btn wide label={t('Formula')} icon={<Sigma aria-hidden className="size-4" />} title={t('Formula in the text (Alt+=)')} onClick={() => math('')} />
-              <Btn wide label={t('On its own line')} icon={<AlignCenter aria-hidden className="size-4" />} onClick={() => math('', true)} />
-            </Group>
             <Group label={t('Structures')}>
               {STRUCTURES.map(([key, label, preview]) => (
                 <Btn key={key} wide label={t(label)} icon={<span aria-hidden className="ribbon-math-preview">{preview}</span>} onClick={() => math(TEMPLATES[key])} />
               ))}
+            </Group>
+            <Group label={t('Matrix')}>
+              <div className="relative">
+                <Btn wide label={t('Matrix')} icon={<Grid3x3 aria-hidden className="size-4" />} pressed={matrixOpen} onClick={() => setMatrixOpen((o) => !o)} />
+                {matrixOpen && (
+                  <MatrixPicker
+                    onPick={(rows, cols, kind) => {
+                      setMatrixOpen(false);
+                      math(matrixLatex(rows, cols, kind));
+                    }}
+                  />
+                )}
+              </div>
+              <Btn label={t('Row below')} icon={<BetweenHorizontalEnd aria-hidden className="size-4" />} title={t('Row below (matrix, cases)')} onClick={() => cell('addRowAfter')} />
+              <Btn label={t('Column to the right')} icon={<BetweenVerticalEnd aria-hidden className="size-4" />} onClick={() => cell('addColumnAfter')} />
+              <Btn label={t('Delete row')} icon={<Rows2 aria-hidden className="size-4" />} onClick={() => cell('removeRow')} />
+              <Btn label={t('Delete column')} icon={<Columns2 aria-hidden className="size-4" />} onClick={() => cell('removeColumn')} />
             </Group>
             <Group label={t('Brackets')}>
               {BRACKET_BUTTONS.map(([latex, glyph, name]) => (
