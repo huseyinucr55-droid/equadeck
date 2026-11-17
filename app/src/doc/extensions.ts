@@ -6,6 +6,7 @@ import Highlight from '@tiptap/extension-highlight';
 import TextAlign from '@tiptap/extension-text-align';
 import { Placeholder } from '@tiptap/extensions';
 import { MathBlock, MathInline } from './math';
+import { Pagination } from './pagination';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -44,5 +45,6 @@ export function extensions(placeholder: string) {
     PageBreak,
     MathInline,
     MathBlock,
+    Pagination,
   ];
 }

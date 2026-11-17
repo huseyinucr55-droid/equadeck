@@ -536,6 +536,12 @@ const DE: Record<string, string> = {
   'derivative': 'Ableitung', 'partial derivative': 'partielle Ableitung', 'bold vector': 'fetter Vektor',
   'ket': 'Ket', 'bra': 'Bra',
 
+  // Export (/doc, phase 3)
+  'Save as PDF': 'Als PDF speichern', 'Download for Word': 'Für Word herunterladen',
+  'In the print window choose "Save as PDF".': 'Wähle im Druckfenster „Als PDF speichern".',
+  'Making the Word file…': 'Word-Datei wird erstellt…', 'Saved for Word. Formulas stay editable there.': 'Für Word gespeichert. Die Formeln bleiben dort bearbeitbar.',
+  'Could not make the Word file.': 'Die Word-Datei konnte nicht erstellt werden.',
+
   // Formulas on the page (/doc, phase 2)
   'Formula in the text (Alt+=)': 'Formel im Text (Alt+=)', 'On its own line': 'Eigene Zeile', 'Structures': 'Strukturen',
   'Fraction': 'Bruch', 'Root': 'Wurzel', 'Power': 'Hochzahl', 'Integral': 'Integral', 'Sum': 'Summe', 'Limit': 'Grenzwert',

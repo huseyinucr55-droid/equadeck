@@ -76,6 +76,8 @@ export type RibbonProps = {
   onDuplicate: () => void;
   onPrint: () => void;
   onDownloadHtml: () => void;
+  onPdf: () => void;
+  onDocx: () => void;
   onLayout: (patch: Partial<Pick<Doc, 'paper' | 'margins' | 'orientation'>>) => void;
   onZoom: (zoom: number) => void;
   onFitWidth: () => void;
@@ -212,8 +214,8 @@ export function Ribbon(p: RibbonProps) {
             <Group label={t('Share')}>
               <Btn wide label={t('Print')} icon={<Printer aria-hidden className="size-4" />} onClick={p.onPrint} />
               <Btn wide label={t('Download HTML')} icon={<FileCode aria-hidden className="size-4" />} onClick={p.onDownloadHtml} />
-              <Btn wide label="PDF" icon={<FileDown aria-hidden className="size-4" />} disabled title={t('Coming soon')} />
-              <Btn wide label="Word" icon={<FileText aria-hidden className="size-4" />} disabled title={t('Coming soon')} />
+              <Btn wide label={t('Save as PDF')} icon={<FileDown aria-hidden className="size-4" />} onClick={p.onPdf} />
+              <Btn wide label={t('Download for Word')} icon={<FileText aria-hidden className="size-4" />} onClick={p.onDocx} />
             </Group>
           </>
         )}

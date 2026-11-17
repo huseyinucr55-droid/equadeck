@@ -178,26 +178,35 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) .doc-canvas { background: #26292f; }
 }
+/* The sheet is a stack of white pages (absolutely placed behind the text)
+   with the text flowing over them; pagination.ts keeps blocks off the gaps. */
 .doc-sheet {
+  position: relative;
   box-sizing: border-box;
   margin: 0 auto;
-  background-color: #fff;
   color: #15181d;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 4px 14px rgba(0, 0, 0, 0.1);
-  display: flex;
-  flex-direction: column;
 }
-/* The text area fills the page inside the margins. */
-.doc-sheet > div { flex: 1; display: flex; flex-direction: column; }
-.doc-sheet .doc-content { flex: 1; }
+.doc-pages { position: absolute; inset: 0; pointer-events: none; }
+.doc-page {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background-color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 4px 14px rgba(0, 0, 0, 0.1);
+}
+.doc-page-paper { position: absolute; }
+.doc-flow { position: relative; box-sizing: border-box; display: flex; flex-direction: column; }
+.doc-flow > div { flex: 1; display: flex; flex-direction: column; }
+.doc-flow .doc-content { flex: 1; }
+.doc-spacer { pointer-events: none; }
 /* School-notebook paper: 5 mm squares or 8 mm lines inside the margins. */
-.doc-sheet[data-paper='squared'] .doc-content {
+.doc-sheet[data-paper='squared'] .doc-page-paper {
   background-image:
     linear-gradient(to right, rgba(70, 120, 200, 0.22) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(70, 120, 200, 0.22) 1px, transparent 1px);
   background-size: 5mm 5mm;
 }
-.doc-sheet[data-paper='lined'] .doc-content {
+.doc-sheet[data-paper='lined'] .doc-page-paper {
   background-image: linear-gradient(to bottom, transparent calc(8mm - 1px), rgba(70, 120, 200, 0.3) calc(8mm - 1px));
   background-size: 100% 8mm;
 }
@@ -262,6 +271,16 @@
   .doc-math math-field:focus-within::part(virtual-keyboard-toggle) { display: flex; }
 }
 .doc-math math-field:focus-within { background: rgba(15, 118, 110, 0.07); outline: 1px solid rgba(15, 118, 110, 0.4); }
+/* A formula you are not editing is plain black ink, like printed text. */
+.doc-math math-field:not(:focus-within) {
+  --contains-highlight-background-color: transparent;
+  --contains-highlight-color: inherit;
+  --smart-fence-color: currentColor;
+  --smart-fence-opacity: 1;
+  --selection-background-color: transparent;
+  --selection-color: inherit;
+  --caret-color: transparent;
+}
 .doc-math-block { display: flex; justify-content: center; margin: 0.6em 0; }
 .doc-math-block math-field { font-size: 1.25em; }
 .doc-math.is-selected math-field { outline: 2px solid var(--lx-color-focus); }
@@ -299,12 +318,21 @@
   .doc-chrome { display: none !important; }
   .doc-app { display: block; height: auto; background: #fff; }
   .doc-canvas { padding: 0; overflow: visible; background: #fff !important; }
-  .doc-sheet {
-    width: auto !important;
-    min-height: 0 !important;
-    padding: 0 !important;
-    zoom: 1 !important;
-    box-shadow: none;
+  /* The browser makes the pages itself (with @page margins): drop our stack and spacers. */
+  .doc-sheet { width: auto !important; min-height: 0 !important; zoom: 1 !important; }
+  .doc-pages, .doc-spacer { display: none !important; }
+  .doc-flow { padding: 0 !important; min-height: 0 !important; }
+  .doc-content p, .doc-content li, .doc-content h1, .doc-content h2, .doc-content h3, .doc-math-block { break-inside: avoid; }
+  .doc-content h1, .doc-content h2, .doc-content h3 { break-after: avoid; }
+  .doc-sheet[data-paper='squared'] .doc-content {
+    background-image:
+      linear-gradient(to right, rgba(70, 120, 200, 0.22) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(70, 120, 200, 0.22) 1px, transparent 1px);
+    background-size: 5mm 5mm;
+  }
+  .doc-sheet[data-paper='lined'] .doc-content {
+    background-image: linear-gradient(to bottom, transparent calc(8mm - 1px), rgba(70, 120, 200, 0.3) calc(8mm - 1px));
+    background-size: 100% 8mm;
   }
   .doc-content { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   .doc-page-break { border: 0; margin: 0; break-after: page; }

@@ -9,6 +9,7 @@ import { useLang, useT } from '../lib/i18n';
 import { to } from '../lib/paths';
 import { extensions } from './extensions';
 import { setMathLanguage } from './math';
+import { layout, onPageCount, repaginate } from './pagination';
 import { Ribbon } from './Ribbon';
 import { StatusBar } from './StatusBar';
 import { MARGIN_MM, loadCurrentId, loadDocs, newDoc, saveCurrentId, saveDocs, type Doc } from './store';
@@ -17,6 +18,7 @@ import './doc.css';
 const MM = 96 / 25.4; // CSS px per mm
 const ZOOM_MIN = 50;
 const ZOOM_MAX = 200;
+const PAGE_GAP = 24; // grey space between two pages, px
 
 function startDocs(untitled: string): { docs: Doc[]; current: string } {
   let docs = loadDocs();
@@ -124,26 +126,38 @@ export default function DocApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Real pages: the pagination plugin (pagination.ts) pushes blocks that would
+  // cross a page edge onto the next page and reports how many pages there are.
+  const pageHeightPx = heightMm * MM;
+  const marginPx = marginMm * MM;
+  const stride = pageHeightPx + PAGE_GAP;
+  const [pages, setPages] = useState(1);
+  useEffect(() => onPageCount(setPages), []);
+  useEffect(() => {
+    layout.pageHeight = pageHeightPx;
+    layout.margin = marginPx;
+    layout.gap = PAGE_GAP;
+    layout.zoom = zoom / 100;
+    if (editor && !editor.isDestroyed) repaginate(editor.view);
+  }, [editor, pageHeightPx, marginPx, zoom]);
+
   const stats = useEditorState({
     editor,
     selector: ({ editor: e }) => {
-      if (!e) return { words: 0, height: 0, caretTop: 0 };
-      const sheet = sheetRef.current;
+      if (!e) return { words: 0, caretTop: 0 };
       let caretTop = 0;
       try {
-        if (sheet) caretTop = (e.view.coordsAtPos(e.state.selection.from).top - sheet.getBoundingClientRect().top) / (zoom / 100);
+        caretTop = (e.view.coordsAtPos(e.state.selection.from).top - e.view.dom.getBoundingClientRect().top) / (zoom / 100);
       } catch {
         /* not laid out yet */
       }
       const text = e.state.doc.textBetween(0, e.state.doc.content.size, ' ', ' ');
       const words = text.split(/\s+/).filter(Boolean).length;
-      return { words, height: sheet?.scrollHeight ?? 0, caretTop };
+      return { words, caretTop };
     },
   });
 
-  const pageHeightPx = heightMm * MM;
-  const pages = Math.max(1, Math.ceil((stats?.height ?? 0) / pageHeightPx - 0.02));
-  const page = Math.min(pages, Math.max(1, Math.floor((stats?.caretTop ?? 0) / pageHeightPx) + 1));
+  const page = Math.min(pages, Math.max(1, Math.floor((stats?.caretTop ?? 0) / stride) + 1));
 
   const onNew = () => {
     flush();
@@ -172,21 +186,21 @@ export default function DocApp() {
   const onDownloadHtml = () => {
     if (!editor) return;
     const html = `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><title>${escapeHtml(doc.title)}</title></head><body>${editor.getHTML()}</body></html>`;
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
-    a.download = `${(doc.title || 'document').replace(/[\\/:*?"<>|]+/g, '_')}.html`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
+    download(new Blob([html], { type: 'text/html' }), `${fileName(doc.title)}.html`);
+  };
+
+  // A short message next to the title ("Saved for Word …").
+  const [notice, setNotice] = useState('');
+  const noticeTimer = useRef<number | undefined>(undefined);
+  const say = (msg: string) => {
+    window.clearTimeout(noticeTimer.current);
+    setNotice(msg);
+    noticeTimer.current = window.setTimeout(() => setNotice(''), 6000);
   };
 
   const sheetStyle = useMemo(
-    () => ({
-      width: `${widthMm}mm`,
-      minHeight: `${heightMm}mm`,
-      padding: `${marginMm}mm`,
-      zoom: zoom / 100,
-    }),
-    [widthMm, heightMm, marginMm, zoom],
+    () => ({ width: `${widthMm}mm`, minHeight: pages * stride - PAGE_GAP, zoom: zoom / 100 }),
+    [widthMm, pages, stride, zoom],
   );
 
   return (
@@ -205,7 +219,7 @@ export default function DocApp() {
           onKeyDown={(e) => e.key === 'Enter' && editor?.commands.focus()}
         />
         <span className="flex items-center gap-1 text-xs text-muted" aria-live="polite">
-          {saved ? <><Check aria-hidden className="size-3.5" /> {t('Saved in this browser')}</> : t('Saving…')}
+          {notice || (saved ? <><Check aria-hidden className="size-3.5" /> {t('Saved in this browser')}</> : t('Saving…'))}
         </span>
         <nav aria-label={t('Main')} className="ml-auto flex items-center gap-2">
           <a href={to('/')} className="doc-link">
@@ -237,6 +251,25 @@ export default function DocApp() {
               window.print();
             }}
             onDownloadHtml={onDownloadHtml}
+            onPdf={() => {
+              flush();
+              say(t('In the print window choose "Save as PDF".'));
+              // Let the hint paint before the print window blocks the page.
+              setTimeout(() => window.print(), 50);
+            }}
+            onDocx={async () => {
+              if (!editor) return;
+              flush();
+              say(t('Making the Word file…'));
+              try {
+                const { toDocx } = await import('./docx-export');
+                const blob = await toDocx(editor.getJSON(), doc);
+                download(blob, `${fileName(doc.title)}.docx`);
+                say(t('Saved for Word. Formulas stay editable there.'));
+              } catch {
+                say(t('Could not make the Word file.'));
+              }
+            }}
             onLayout={(patch) => patchDoc(doc.id, patch)}
             onZoom={setZoom}
             onFitWidth={fitWidth}
@@ -247,7 +280,17 @@ export default function DocApp() {
 
       <main className="doc-canvas" ref={canvasRef} aria-label={t('Page')}>
         <div className="doc-sheet" data-paper={doc.paper} ref={sheetRef} style={sheetStyle}>
-          <EditorContent editor={editor} />
+          {/* The white pages behind the text, each with its paper pattern inside the margins. */}
+          <div className="doc-pages" aria-hidden>
+            {Array.from({ length: pages }, (_, i) => (
+              <div key={i} className="doc-page" style={{ top: i * stride, height: pageHeightPx }}>
+                <div className="doc-page-paper" style={{ inset: marginPx }} />
+              </div>
+            ))}
+          </div>
+          <div className="doc-flow" style={{ padding: `${marginPx}px ${marginPx}px 0`, minHeight: pageHeightPx - marginPx }}>
+            <EditorContent editor={editor} />
+          </div>
         </div>
       </main>
 
@@ -256,6 +299,20 @@ export default function DocApp() {
       </div>
     </div>
   );
+}
+
+const fileName = (title: string) => (title || 'document').replace(/[\\/:*?"<>|]+/g, '_');
+
+function download(blob: Blob, name: string) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.append(a);
+  a.click();
+  setTimeout(() => {
+    a.remove();
+    URL.revokeObjectURL(a.href);
+  }, 60_000);
 }
 
 function escapeHtml(s: string) {

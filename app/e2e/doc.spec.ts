@@ -19,7 +19,7 @@ async function typeLine(page: Page, text: string) {
 test.describe('Document view', () => {
   test('DOC-1 opens a white A4 page with ribbon and status bar', async ({ page }) => {
     await openDoc(page);
-    await expect(sheet(page)).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+    await expect(page.locator('.doc-page').first()).toHaveCSS('background-color', 'rgb(255, 255, 255)');
     const w = await sheet(page).evaluate((s) => s.getBoundingClientRect().width / Number(getComputedStyle(s).zoom || 1));
     expect(Math.round(w)).toBe(794); // 210 mm
     await expect(page.getByRole('tablist', { name: 'Ribbon' })).toBeVisible();
@@ -47,7 +47,7 @@ test.describe('Document view', () => {
   test('DOC-3 paper: squared, lined and blank', async ({ page }) => {
     await openDoc(page);
     await tab(page, 'Layout').click();
-    const bg = () => body(page).evaluate((c) => getComputedStyle(c).backgroundImage);
+    const bg = () => page.locator('.doc-page-paper').first().evaluate((c) => getComputedStyle(c).backgroundImage);
     await page.getByRole('button', { name: 'Squared' }).click();
     expect(await bg()).toContain('linear-gradient');
     await page.getByRole('button', { name: 'Lined' }).click();
@@ -162,6 +162,7 @@ test.describe('Document view', () => {
     const formula = async (keys: string) => {
       await page.keyboard.press('Alt+Equal');
       await expect(page.locator('.doc-math math-field').last()).toBeFocused();
+      await page.waitForTimeout(150); // the field finishes setting up (a person never types this fast)
       await page.keyboard.type(keys);
       await page.keyboard.press('Escape');
       await page.keyboard.insertText(' ');
@@ -170,5 +171,59 @@ test.describe('Document view', () => {
     await formula('xelementvonA');
     await formula('unendlich');
     expect(await fields(page)).toEqual(['\\sum', 'x\\in A', '\\infty']);
+  });
+
+  // Phase 3: real pages and export.
+  test('DOC-11 long text flows onto real A4 pages; nothing sits in the gap', async ({ page }) => {
+    await openDoc(page);
+    await body(page).click();
+    for (let i = 1; i <= 40; i++) {
+      await page.keyboard.insertText(`Absatz ${i}: Seien A und B zwei Mengen. Die Vereinigung enthält alle Elemente, die in A oder in B liegen.`);
+      await page.keyboard.press('Enter');
+    }
+    await expect(page.getByText(/Page \d of [2-9]/)).toBeVisible();
+    const misplaced = await page.evaluate(() => {
+      const sheet = document.querySelector('.doc-sheet')!.getBoundingClientRect();
+      const pages = [...document.querySelectorAll('.doc-page')].map((p) => {
+        const r = p.getBoundingClientRect();
+        return [r.top - sheet.top, r.bottom - sheet.top];
+      });
+      return [...document.querySelectorAll('.doc-content > p')].filter((p) => {
+        const r = p.getBoundingClientRect();
+        const top = r.top - sheet.top;
+        const bottom = r.bottom - sheet.top;
+        return !pages.some(([a, b]) => top >= a && bottom <= b - 80); // inside a page, above its bottom margin
+      }).length;
+    });
+    expect(misplaced).toBe(0);
+  });
+
+  test('DOC-12 a page break starts a new page; Word export downloads a .docx', async ({ page }) => {
+    await page.addInitScript(() => {
+      const content = {
+        type: 'doc',
+        content: [
+          { type: 'paragraph', content: [{ type: 'text', text: 'Es gilt ' }, { type: 'mathInline', attrs: { latex: 'a^2+b^2=c^2' } }] },
+          { type: 'mathBlock', attrs: { latex: '\\sum_{k=1}^{n}\\frac{1}{k^2}' } },
+          { type: 'pageBreak' },
+          { type: 'paragraph', content: [{ type: 'text', text: 'Seite zwei' }] },
+        ],
+      };
+      localStorage.setItem('lx.docs.v1', JSON.stringify([{ id: 'w', title: 'Export Test', updatedAt: 1, content, paper: 'blank', margins: 'normal', orientation: 'portrait' }]));
+      localStorage.setItem('lx.docs.current', 'w');
+    });
+    await page.goto('/doc');
+    await expect(page.locator('.doc-math math-field')).toHaveCount(2);
+    await expect(page.getByText('of 2')).toBeVisible();
+    await expect(page.locator('.doc-page')).toHaveCount(2);
+    await tab(page, 'File').click();
+    const dl = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Download for Word' }).click();
+    const file = await dl;
+    expect(file.suggestedFilename()).toBe('Export Test.docx');
+    const { readFileSync } = await import('node:fs');
+    const bytes = readFileSync((await file.path())!);
+    expect(bytes.subarray(0, 2).toString()).toBe('PK'); // a zip, as .docx files are
+    await expect(page.getByText('Saved for Word')).toBeVisible();
   });
 });
