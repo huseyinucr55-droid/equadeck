@@ -285,6 +285,43 @@ test.describe('Document view', () => {
     await expect(body(page)).toContainText('sei und');
   });
 
+  test('DOC-19 typing on the page offers symbols like the formula editor', async ({ page }) => {
+    await openDoc(page);
+    await page.getByRole('button', { name: /Language: English/ }).click();
+    const text = page.getByRole('textbox', { name: 'Dokumenttext' });
+    await text.click();
+    await page.keyboard.type('A äqu');
+    const list = page.getByRole('listbox', { name: 'Vorschläge' });
+    await expect(list).toBeVisible();
+    await expect(list.getByRole('option').first()).toHaveAttribute('aria-selected', 'true');
+    await expect(list.getByRole('option').first()).toContainText('äquivalent');
+    // Enter puts in the symbol as a formula; you keep writing text after it.
+    await page.keyboard.press('Enter');
+    await expect(list).toHaveCount(0);
+    await page.keyboard.type(' B ist wahr');
+    expect(await fields(page)).toEqual(['\\equiv']);
+    await expect(text).toContainText('B ist wahr');
+    // Two words: "genau dann" offers ⇔.
+    await page.keyboard.type(' genau dann');
+    await expect(list.getByRole('option').first()).toContainText('genau dann');
+    // Esc keeps the words as text.
+    await page.keyboard.press('Escape');
+    await expect(list).toHaveCount(0);
+    await expect(text).toContainText('genau dann');
+    // A fraction opens its formula with the boxes to fill in.
+    await page.keyboard.type(' bruch');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.doc-math math-field').last()).toBeFocused();
+    // The switch in View turns it off.
+    await page.keyboard.press('Escape');
+    await tab(page, 'Ansicht').click();
+    await page.getByRole('button', { name: 'Vorschläge im Text' }).click();
+    await text.click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' summe');
+    await expect(list).toHaveCount(0);
+  });
+
   test('DOC-15 tables: insert, add a row, delete', async ({ page }) => {
     await openDoc(page);
     await body(page).click();

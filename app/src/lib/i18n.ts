@@ -539,6 +539,8 @@ const DE: Record<string, string> = {
 
   'Formula: type a word for symbols · Tab next box · Esc back to text': 'Formel: Wort tippen für Zeichen · Tab nächstes Kästchen · Esc zurück zum Text',
 
+  'Suggestions in the text': 'Vorschläge im Text',
+  'Typing a word like "summe" or "äquivalent" offers the symbol': 'Ein Wort wie „summe" oder „äquivalent" bietet das Zeichen an',
   'Templates': 'Vorlagen', 'Worksheet': 'Arbeitsblatt', 'Notes': 'Mitschrift', 'Homework': 'Hausaufgabe',
   'Table': 'Tabelle', 'Table with 3 rows and 3 columns': 'Tabelle mit 3 Zeilen und 3 Spalten', 'Row below': 'Zeile darunter',
   'Column to the right': 'Spalte rechts', 'Delete row': 'Zeile löschen', 'Delete column': 'Spalte löschen', 'Delete table': 'Tabelle löschen',

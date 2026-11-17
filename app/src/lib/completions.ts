@@ -333,8 +333,12 @@ function suggestionList(lang: Lang): Candidate[] {
   return list;
 }
 
-/** Symbols for a word typed in a formula, best first (at most `limit`). */
-export function suggestFor(word: string, limit = 8): Suggestion[] {
+/**
+ * Symbols for a word typed in a formula or text, best first (at most `limit`).
+ * `prefixOnly` (for running text) skips matches in the middle of a name, so
+ * ordinary words don't keep opening the list.
+ */
+export function suggestFor(word: string, limit = 8, prefixOnly = false): Suggestion[] {
   const q = norm(word);
   if (q.length < 3) return [];
   const scored = suggestionList(getLang())
@@ -343,7 +347,7 @@ export function suggestFor(word: string, limit = 8): Suggestion[] {
       for (const t of c.terms) {
         if (t === q) r = Math.max(r, 4);
         else if (t.startsWith(q)) r = Math.max(r, 3);
-        else if (q.length >= 4 && t.includes(q)) r = Math.max(r, 1);
+        else if (!prefixOnly && q.length >= 4 && t.includes(q)) r = Math.max(r, 1);
       }
       return { c, r };
     })

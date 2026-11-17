@@ -8,6 +8,7 @@ import { Placeholder } from '@tiptap/extensions';
 import { MathBlock, MathInline } from './math';
 import { Pagination } from './pagination';
 import { TableKit } from '@tiptap/extension-table';
+import { TextSuggestions } from './text-suggest';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -48,5 +49,6 @@ export function extensions(placeholder: string) {
     MathBlock,
     Pagination,
     TableKit.configure({ table: { resizable: false } }),
+    TextSuggestions,
   ];
 }

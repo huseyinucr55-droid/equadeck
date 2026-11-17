@@ -7,12 +7,11 @@
 // The word is read from the formula itself (the letters right before the
 // caret), not from key presses, so it also works with the iPad keyboard,
 // MathLive's own keyboard and umlauts typed without a key event.
-import { convertLatexToMarkup, type MathfieldElement } from 'mathlive';
+import type { MathfieldElement } from 'mathlive';
 import { suggestFor, type Suggestion } from '../lib/completions';
+import { hideSuggestionBox, showSuggestionBox } from './suggest-box';
 
 const WORD_BEFORE_CARET = /(?:^|[^\\A-Za-zÄÖÜäöüß])([A-Za-zÄÖÜäöüß]+)$/;
-
-let box: HTMLDivElement | null = null;
 
 export function attachSuggestions(mf: MathfieldElement) {
   let items: Suggestion[] = [];
@@ -28,46 +27,23 @@ export function attachSuggestions(mf: MathfieldElement) {
 
   const close = () => {
     items = [];
-    box?.remove();
-    box = null;
+    hideSuggestionBox(mf);
   };
 
   const render = () => {
     if (!items.length) return close();
-    box ??= document.body.appendChild(document.createElement('div'));
-    box.className = 'doc-suggest';
-    box.setAttribute('role', 'listbox');
-    box.setAttribute('aria-label', document.documentElement.lang === 'de' ? 'Vorschläge' : 'Suggestions');
-    box.replaceChildren(
-      ...items.map((s, i) => {
-        const row = document.createElement('div');
-        row.className = 'doc-suggest-item';
-        row.setAttribute('role', 'option');
-        row.setAttribute('aria-selected', String(i === index));
-        const sym = document.createElement('span');
-        sym.className = 'doc-suggest-symbol';
-        try {
-          sym.innerHTML = convertLatexToMarkup(s.latex.replace(/#\?/g, '\\placeholder{}'));
-        } catch {
-          sym.textContent = s.latex;
-        }
-        const label = document.createElement('span');
-        label.className = 'doc-suggest-label';
-        label.textContent = s.meaning;
-        row.append(sym, label);
-        row.addEventListener('mousedown', (e) => e.preventDefault());
-        row.addEventListener('click', () => {
-          index = i;
-          accept();
-        });
-        return row;
-      }),
-    );
     // Under the caret (MathLive draws it inside its shadow DOM), else under the field.
     const caret = mf.shadowRoot?.querySelector('.ML__caret, .ML__text-caret');
-    const r = (caret ?? mf).getBoundingClientRect();
-    box.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - 300))}px`;
-    box.style.top = `${Math.min(r.bottom + 6, window.innerHeight - box.offsetHeight - 8)}px`;
+    showSuggestionBox(
+      items,
+      index,
+      (caret ?? mf).getBoundingClientRect(),
+      (i) => {
+        index = i;
+        accept();
+      },
+      mf,
+    );
   };
 
   /** "Aäquivalent": the variable A, then the word "äquivalent" — try the longest tail that means something. */

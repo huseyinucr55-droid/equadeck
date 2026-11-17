@@ -96,6 +96,8 @@ export type RibbonProps = {
   onZoom: (zoom: number) => void;
   onFitWidth: () => void;
   onToggleDark: () => void;
+  textSuggest: boolean;
+  onToggleTextSuggest: () => void;
 };
 
 const keep = (e: React.MouseEvent) => e.preventDefault();
@@ -392,6 +394,16 @@ export function Ribbon(p: RibbonProps) {
               <Btn label={t('Zoom in')} icon={<ZoomIn aria-hidden className="size-4" />} onClick={() => p.onZoom(p.zoom + 10)} />
               <Btn wide label="100 %" icon={<Square aria-hidden className="size-4" />} onClick={() => p.onZoom(100)} />
               <Btn wide label={t('Page width')} icon={<Maximize2 aria-hidden className="size-4" />} onClick={p.onFitWidth} />
+            </Group>
+            <Group label={t('Typing')}>
+              <Btn
+                wide
+                label={t('Suggestions in the text')}
+                icon={<Sigma aria-hidden className="size-4" />}
+                title={t('Typing a word like "summe" or "äquivalent" offers the symbol')}
+                pressed={p.textSuggest}
+                onClick={p.onToggleTextSuggest}
+              />
             </Group>
             <Group label={t('Appearance')}>
               <Btn

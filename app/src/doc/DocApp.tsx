@@ -10,6 +10,7 @@ import { to } from '../lib/paths';
 import { extensions } from './extensions';
 import { setMathLanguage } from './math';
 import { template } from './templates';
+import { setTextSuggestions, textSuggestionsOn } from './text-suggest';
 import { layout, onPageCount, repaginate } from './pagination';
 import { Ribbon } from './Ribbon';
 import { StatusBar } from './StatusBar';
@@ -55,6 +56,7 @@ export default function DocApp() {
   const [saved, setSaved] = useState(true);
   const titleRef = useRef<HTMLInputElement>(null);
   const restoreInput = useRef<HTMLInputElement>(null);
+  const [textSuggest, setTextSuggest] = useState(textSuggestionsOn);
   const canvasRef = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
   const saveTimer = useRef<number | undefined>(undefined);
@@ -302,6 +304,11 @@ export default function DocApp() {
             onZoom={setZoom}
             onFitWidth={fitWidth}
             onToggleDark={toggleDark}
+            textSuggest={textSuggest}
+            onToggleTextSuggest={() => {
+              setTextSuggestions(!textSuggest);
+              setTextSuggest(!textSuggest);
+            }}
           />
         </div>
       )}

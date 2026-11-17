@@ -47,7 +47,8 @@ declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     math: {
       /** Insert a formula at the cursor (in the text, or on its own line) and start typing in it. */
-      insertMath: (latex?: string, display?: boolean) => ReturnType;
+      /** `stayInText`: a finished symbol (⇔) from the text suggestions; keep typing text after it. */
+      insertMath: (latex?: string, display?: boolean, stayInText?: boolean) => ReturnType;
     };
   }
 }
@@ -208,7 +209,7 @@ function makeNode(name: 'mathInline' | 'mathBlock', display: boolean) {
       if (display) return {};
       return {
         insertMath:
-          (latex = '', asBlock = false) =>
+          (latex = '', asBlock = false, stayInText = false) =>
           ({ editor, tr, dispatch }) => {
             const type = editor.schema.nodes[asBlock ? 'mathBlock' : 'mathInline'];
             // "#?" marks a box to fill in.
@@ -222,7 +223,7 @@ function makeNode(name: 'mathInline' | 'mathBlock', display: boolean) {
               return at < 0;
             });
             dispatch(tr);
-            if (at >= 0) focusFieldAt(editor, at);
+            if (at >= 0 && !stayInText) focusFieldAt(editor, at);
             return true;
           },
       };
