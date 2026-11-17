@@ -315,7 +315,7 @@ const DE: Record<string, string> = {
   'proportional': 'proportional',
   'asymptotic': 'asymptotisch',
   'precedes': 'geht voraus',
-  'succeeds': 'folgt',
+  'succeeds': 'folgt auf (Ordnung)',
   'parallel': 'parallel',
   'perpendicular': 'senkrecht',
   'divides': 'teilt',
@@ -396,6 +396,7 @@ const DE: Record<string, string> = {
   'calligraphic letter': 'Schreibschrift-Buchstabe',
   // brackets
   'parentheses': 'runde Klammern',
+  'curly braces': 'geschweifte Klammern',
   'square brackets': 'eckige Klammern',
   'braces': 'geschweifte Klammern',
   'angle brackets': 'spitze Klammern',
@@ -535,6 +536,17 @@ const DE: Record<string, string> = {
   'display fraction': 'großer Bruch', 'upright': 'aufrecht', 'colour': 'Farbe', 'chemistry': 'Chemie',
   'derivative': 'Ableitung', 'partial derivative': 'partielle Ableitung', 'bold vector': 'fetter Vektor',
   'ket': 'Ket', 'bra': 'Bra',
+
+  'Formula: type a word for symbols · Tab next box · Esc back to text': 'Formel: Wort tippen für Zeichen · Tab nächstes Kästchen · Esc zurück zum Text',
+
+  'Templates': 'Vorlagen', 'Worksheet': 'Arbeitsblatt', 'Notes': 'Mitschrift', 'Homework': 'Hausaufgabe',
+  'Table': 'Tabelle', 'Table with 3 rows and 3 columns': 'Tabelle mit 3 Zeilen und 3 Spalten', 'Row below': 'Zeile darunter',
+  'Column to the right': 'Spalte rechts', 'Delete row': 'Zeile löschen', 'Delete column': 'Spalte löschen', 'Delete table': 'Tabelle löschen',
+  'Backup': 'Sicherung', 'Save backup': 'Sicherung speichern', 'Load backup': 'Sicherung laden',
+  'All documents in one file, to keep safe or move to another device': 'Alle Dokumente in einer Datei, zum Aufbewahren oder für ein anderes Gerät',
+  'Backup saved. Keep the file somewhere safe.': 'Sicherung gespeichert. Bewahre die Datei gut auf.',
+  'This is not an Equadeck backup file.': 'Das ist keine Equadeck-Sicherung.',
+  'Backup loaded: {added} new, {updated} updated.': 'Sicherung geladen: {added} neu, {updated} aktualisiert.',
 
   // Export (/doc, phase 3)
   'Save as PDF': 'Als PDF speichern', 'Download for Word': 'Für Word herunterladen',

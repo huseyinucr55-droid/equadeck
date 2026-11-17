@@ -5,7 +5,7 @@ import { useRef, useState, type ReactNode } from 'react';
 import type { MathfieldElement } from 'mathlive';
 import { useEditorState, type Editor } from '@tiptap/react';
 import {
-  AlignCenter, AlignJustify, AlignLeft, AlignRight, Baseline, Bold, Copy, Eraser, FileCode, FileDown, FilePlus, FileText,
+  AlignCenter, AlignJustify, AlignLeft, AlignRight, Archive, ArchiveRestore, Baseline, BetweenHorizontalEnd, BetweenVerticalEnd, Columns2, LayoutTemplate, Rows2, Table, Bold, Copy, Eraser, FileCode, FileDown, FilePlus, FileText,
   FolderOpen, Grid3x3, Highlighter, Italic, List, ListOrdered, Maximize2, Minus, Moon, Pencil, Printer, RectangleHorizontal,
   RectangleVertical, Redo2, Rows3, SeparatorHorizontal, Sigma, Square, Strikethrough, Sun, Trash2,
   Underline, Undo2, ZoomIn, ZoomOut,
@@ -13,6 +13,7 @@ import {
 import { useT } from '../lib/i18n';
 import type { Doc, Margins, Orientation, Paper } from './store';
 import { TEMPLATES, activeMathField } from './math';
+import type { TemplateKind } from './templates';
 
 export const TEXT_COLOURS = ['#000000', '#c92a2a', '#1864ab', '#2b8a3e', '#e8590c', '#7048e8', '#868e96', '#0b7285'];
 export const HIGHLIGHTS = ['#fff3bf', '#d3f9d8', '#d0ebff', '#ffdeeb', '#e9ecef'];
@@ -34,6 +35,16 @@ const STRUCTURES: [keyof typeof TEMPLATES, string, string][] = [
   ['limit', 'Limit', 'lim'],
   ['matrix', 'Matrix', '[ ]'],
   ['cases', 'Cases', '{'],
+];
+
+/** Brackets that grow with what is inside; { } is awkward on a German keyboard. */
+const BRACKET_BUTTONS: [string, string, string][] = [
+  ['\\left(#?\\right)', '( )', 'parentheses'],
+  ['\\left[#?\\right]', '[ ]', 'square brackets'],
+  ['\\left\\{#?\\right\\}', '{ }', 'curly braces'],
+  ['\\left|#?\\right|', '| |', 'absolute value'],
+  ['\\left\\lVert#?\\right\\rVert', '‖ ‖', 'norm'],
+  ['\\left\\langle#?\\right\\rangle', '⟨ ⟩', 'angle brackets'],
 ];
 
 const SYMBOLS: [string, string, string][] = [
@@ -77,6 +88,9 @@ export type RibbonProps = {
   onPrint: () => void;
   onDownloadHtml: () => void;
   onPdf: () => void;
+  onBackup: () => void;
+  onTemplate: (kind: TemplateKind) => void;
+  onRestore: () => void;
   onDocx: () => void;
   onLayout: (patch: Partial<Pick<Doc, 'paper' | 'margins' | 'orientation'>>) => void;
   onZoom: (zoom: number) => void;
@@ -146,6 +160,7 @@ export function Ribbon(p: RibbonProps) {
       align: (['left', 'center', 'right', 'justify'] as const).find((a) => e.isActive({ textAlign: a })) ?? 'left',
       size: (e.getAttributes('textStyle').fontSize as string | undefined)?.replace('px', '') ?? '',
       font: (e.getAttributes('textStyle').fontFamily as string | undefined) ?? '',
+      inTable: e.isActive('table'),
       canUndo: e.can().undo(),
       canRedo: e.can().redo(),
     }),
@@ -187,6 +202,8 @@ export function Ribbon(p: RibbonProps) {
             aria-controls={`panel-${id}`}
             tabIndex={tab === id ? 0 : -1}
             className="ribbon-tab"
+            // Switching tabs keeps the cursor where you were typing (text or formula).
+            onMouseDown={keep}
             onClick={() => setTab(id)}
             onKeyDown={(e) => {
               const i = tabs.findIndex(([k]) => k === id);
@@ -210,6 +227,15 @@ export function Ribbon(p: RibbonProps) {
               <Btn wide label={t('Open')} icon={<FolderOpen aria-hidden className="size-4" />} pressed={openList} onClick={() => setOpenList((o) => !o)} />
               <Btn wide label={t('Rename')} icon={<Pencil aria-hidden className="size-4" />} onClick={p.onRename} />
               <Btn wide label={t('Duplicate')} icon={<Copy aria-hidden className="size-4" />} onClick={p.onDuplicate} />
+            </Group>
+            <Group label={t('Templates')}>
+              <Btn wide label={t('Worksheet')} icon={<LayoutTemplate aria-hidden className="size-4" />} onClick={() => p.onTemplate('worksheet')} />
+              <Btn wide label={t('Notes')} icon={<LayoutTemplate aria-hidden className="size-4" />} onClick={() => p.onTemplate('notes')} />
+              <Btn wide label={t('Homework')} icon={<LayoutTemplate aria-hidden className="size-4" />} onClick={() => p.onTemplate('homework')} />
+            </Group>
+            <Group label={t('Backup')}>
+              <Btn wide label={t('Save backup')} icon={<Archive aria-hidden className="size-4" />} title={t('All documents in one file, to keep safe or move to another device')} onClick={p.onBackup} />
+              <Btn wide label={t('Load backup')} icon={<ArchiveRestore aria-hidden className="size-4" />} onClick={p.onRestore} />
             </Group>
             <Group label={t('Share')}>
               <Btn wide label={t('Print')} icon={<Printer aria-hidden className="size-4" />} onClick={p.onPrint} />
@@ -298,12 +324,27 @@ export function Ribbon(p: RibbonProps) {
                 <Btn key={key} wide label={t(label)} icon={<span aria-hidden className="ribbon-math-preview">{preview}</span>} onClick={() => math(TEMPLATES[key])} />
               ))}
             </Group>
+            <Group label={t('Brackets')}>
+              {BRACKET_BUTTONS.map(([latex, glyph, name]) => (
+                <button key={latex} type="button" className="ribbon-btn ribbon-symbol" aria-label={t(name)} title={t(name)} onMouseDown={keep} onClick={() => math(latex)}>
+                  {glyph}
+                </button>
+              ))}
+            </Group>
             <Group label={t('Symbols')}>
               {SYMBOLS.map(([latex, glyph, name]) => (
                 <button key={latex} type="button" className="ribbon-btn ribbon-symbol" aria-label={t(name)} title={t(name)} onMouseDown={keep} onClick={() => math(latex)}>
                   {glyph}
                 </button>
               ))}
+            </Group>
+            <Group label={t('Table')}>
+              <Btn wide label={t('Table')} icon={<Table aria-hidden className="size-4" />} title={t('Table with 3 rows and 3 columns')} onClick={() => c().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} />
+              <Btn label={t('Row below')} icon={<BetweenHorizontalEnd aria-hidden className="size-4" />} disabled={!s.inTable} onClick={() => c().addRowAfter().run()} />
+              <Btn label={t('Column to the right')} icon={<BetweenVerticalEnd aria-hidden className="size-4" />} disabled={!s.inTable} onClick={() => c().addColumnAfter().run()} />
+              <Btn label={t('Delete row')} icon={<Rows2 aria-hidden className="size-4" />} disabled={!s.inTable} onClick={() => c().deleteRow().run()} />
+              <Btn label={t('Delete column')} icon={<Columns2 aria-hidden className="size-4" />} disabled={!s.inTable} onClick={() => c().deleteColumn().run()} />
+              <Btn label={t('Delete table')} icon={<Trash2 aria-hidden className="size-4" />} disabled={!s.inTable} onClick={() => c().deleteTable().run()} />
             </Group>
             <Group label={t('Page')}>
               <Btn wide label={t('Page break')} icon={<SeparatorHorizontal aria-hidden className="size-4" />} onClick={() => c().setPageBreak().run()} />

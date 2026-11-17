@@ -229,6 +229,13 @@
 .doc-content ol { list-style: decimal; }
 .doc-content hr { border: 0; border-top: 1px solid #c4c9d1; margin: 1em 0; }
 .doc-content mark { border-radius: 2px; padding: 0 1px; }
+/* Tables (value tables and the like). */
+.doc-content table { border-collapse: collapse; margin: 0.5em 0; width: auto; min-width: 40%; table-layout: auto; }
+.doc-content th, .doc-content td { border: 1px solid #8a929e; padding: 0.25em 0.6em; min-width: 3em; vertical-align: top; }
+.doc-content th { background: #f1f3f5; font-weight: 600; text-align: left; }
+.doc-content td > p, .doc-content th > p { margin: 0; }
+.doc-content .selectedCell { background: rgba(15, 118, 110, 0.12); }
+.doc-content .tableWrapper { overflow-x: auto; }
 .doc-content p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
@@ -246,6 +253,33 @@
   position: absolute;
 }
 .doc-content .ProseMirror-selectednode { outline: 2px solid var(--lx-color-focus); }
+
+/* --- Suggestion list while typing a word in a formula (math-suggest.ts) ----- */
+.doc-suggest {
+  position: fixed;
+  z-index: 50;
+  min-width: 14rem;
+  max-width: 22rem;
+  padding: 0.25rem;
+  border: 1px solid var(--lx-color-border);
+  border-radius: 8px;
+  background: var(--lx-color-bg);
+  color: var(--lx-color-text);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2);
+  font-size: 0.875rem;
+}
+.doc-suggest-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.doc-suggest-item[aria-selected='true'] { background: var(--lx-color-accent-soft); }
+.doc-suggest-symbol { min-width: 2.5rem; text-align: center; font-size: 1.05rem; }
+.doc-suggest-label { color: var(--lx-color-text-muted); }
+@media (pointer: coarse) { .doc-suggest-item { padding: 0.7rem 0.8rem; } }
 
 /* --- Formulas on the page (MathLive) ---------------------------------------- */
 .doc-math math-field {
@@ -311,6 +345,8 @@
   cursor: pointer;
 }
 .doc-zoom-btn:hover { background: var(--lx-color-surface); }
+.doc-formula-hint { color: var(--lx-color-accent); font-weight: 500; }
+@media (max-width: 640px) { .doc-formula-hint { display: none; } }
 .doc-zoom-range { width: 8rem; accent-color: var(--lx-color-accent); }
 
 /* --- Print: only the page, with its paper ------------------------------------ */

@@ -7,6 +7,7 @@ import TextAlign from '@tiptap/extension-text-align';
 import { Placeholder } from '@tiptap/extensions';
 import { MathBlock, MathInline } from './math';
 import { Pagination } from './pagination';
+import { TableKit } from '@tiptap/extension-table';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -46,5 +47,6 @@ export function extensions(placeholder: string) {
     MathInline,
     MathBlock,
     Pagination,
+    TableKit.configure({ table: { resizable: false } }),
   ];
 }

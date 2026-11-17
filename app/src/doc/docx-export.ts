@@ -3,7 +3,7 @@
 // alignment); formulas become OMML, so they stay editable in Word.
 import {
   AlignmentType, BorderStyle, Document, HeadingLevel, ImportedXmlComponent, LevelFormat, PageBreak, PageOrientation, Packer, Paragraph,
-  ShadingType, TextRun, convertMillimetersToTwip, type ParagraphChild,
+  ShadingType, Table, TableCell, TableRow, TextRun, convertMillimetersToTwip, type ParagraphChild,
 } from 'docx';
 import type { JSONContent } from '@tiptap/react';
 import { latexToOmml } from './omml';
@@ -98,11 +98,36 @@ function blocks(content: JSONContent[] = [], list?: { ref: string; level: number
       case 'blockquote':
         out.push(...blocks(n.content, list));
         break;
+      case 'table':
+        out.push(table(n) as unknown as Paragraph);
+        break;
       default:
         if (n.content) out.push(new Paragraph({ children: inline(n.content) }));
     }
   }
   return out;
+}
+
+/** A document table: header cells shaded, thin grey borders, cell text kept. */
+function table(n: JSONContent): Table {
+  const border = { style: BorderStyle.SINGLE, size: 4, color: '8A929E' };
+  return new Table({
+    rows: (n.content ?? []).map(
+      (row) =>
+        new TableRow({
+          children: (row.content ?? []).map(
+            (cell) =>
+              new TableCell({
+                children: blocks(cell.content).length ? blocks(cell.content) : [new Paragraph('')],
+                shading: cell.type === 'tableHeader' ? { type: ShadingType.CLEAR, color: 'auto', fill: 'F1F3F5' } : undefined,
+                columnSpan: Number(cell.attrs?.colspan) > 1 ? Number(cell.attrs?.colspan) : undefined,
+                rowSpan: Number(cell.attrs?.rowspan) > 1 ? Number(cell.attrs?.rowspan) : undefined,
+                borders: { top: border, bottom: border, left: border, right: border },
+              }),
+          ),
+        }),
+    ),
+  });
 }
 
 export async function toDocx(content: JSONContent, doc: Doc): Promise<Blob> {

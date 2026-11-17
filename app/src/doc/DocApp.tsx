@@ -9,10 +9,11 @@ import { useLang, useT } from '../lib/i18n';
 import { to } from '../lib/paths';
 import { extensions } from './extensions';
 import { setMathLanguage } from './math';
+import { template } from './templates';
 import { layout, onPageCount, repaginate } from './pagination';
 import { Ribbon } from './Ribbon';
 import { StatusBar } from './StatusBar';
-import { MARGIN_MM, loadCurrentId, loadDocs, newDoc, saveCurrentId, saveDocs, type Doc } from './store';
+import { MARGIN_MM, backupFile, loadCurrentId, loadDocs, mergeDocs, newDoc, readBackup, saveCurrentId, saveDocs, type Doc } from './store';
 import './doc.css';
 
 const MM = 96 / 25.4; // CSS px per mm
@@ -53,6 +54,7 @@ export default function DocApp() {
   const [zoom, setZoomState] = useState(100);
   const [saved, setSaved] = useState(true);
   const titleRef = useRef<HTMLInputElement>(null);
+  const restoreInput = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
   const saveTimer = useRef<number | undefined>(undefined);
@@ -97,6 +99,17 @@ export default function DocApp() {
   }, [editor, currentId]);
 
   useEffect(() => setMathLanguage(lang), [lang]);
+
+  // Typing in a formula: the status bar says so and how to get out.
+  const [inFormula, setInFormula] = useState(false);
+  useEffect(() => {
+    const check = () => setInFormula(document.activeElement?.tagName === 'MATH-FIELD');
+    document.addEventListener('focusin', check);
+    document.addEventListener('focusout', () => setTimeout(check, 0));
+    return () => {
+      document.removeEventListener('focusin', check);
+    };
+  }, []);
 
   useEffect(() => {
     editor?.setOptions({ editorProps: { attributes: { 'aria-label': t('Document text'), class: 'doc-content', spellcheck: 'true', lang } } });
@@ -251,6 +264,21 @@ export default function DocApp() {
               window.print();
             }}
             onDownloadHtml={onDownloadHtml}
+            onBackup={() => {
+              flush();
+              // The open document with its latest text, plus all the others.
+              const all = docs.map((d) => (d.id === doc.id && editor ? { ...d, content: editor.getJSON() } : d));
+              download(backupFile(all), `equadeck-backup-${new Date().toISOString().slice(0, 10)}.json`);
+              say(t('Backup saved. Keep the file somewhere safe.'));
+            }}
+            onRestore={() => restoreInput.current?.click()}
+            onTemplate={(kind) => {
+              flush();
+              const tpl = template(kind, lang);
+              const d = { ...newDoc(tpl.title), content: tpl.content, paper: tpl.paper };
+              setDocs((list) => [...list, d]);
+              setCurrentId(d.id);
+            }}
             onPdf={() => {
               flush();
               say(t('In the print window choose "Save as PDF".'));
@@ -278,6 +306,32 @@ export default function DocApp() {
         </div>
       )}
 
+      <input
+        ref={restoreInput}
+        type="file"
+        accept="application/json,.json"
+        // Opened by the "Load backup" button; not a control of its own.
+        hidden
+        aria-label={t('Load backup')}
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          e.target.value = '';
+          if (!file) return;
+          const incoming = readBackup(await file.text());
+          if (!incoming) {
+            say(t('This is not an Equadeck backup file.'));
+            return;
+          }
+          flush();
+          const { docs: merged, added, updated } = mergeDocs(loadDocs(), incoming);
+          setDocs(merged);
+          if (editor && merged.some((d) => d.id === currentId)) {
+            editor.commands.setContent(merged.find((d) => d.id === currentId)?.content ?? '', { emitUpdate: false });
+          }
+          say(t('Backup loaded: {added} new, {updated} updated.', { added, updated }));
+        }}
+      />
+
       <main className="doc-canvas" ref={canvasRef} aria-label={t('Page')}>
         <div className="doc-sheet" data-paper={doc.paper} ref={sheetRef} style={sheetStyle}>
           {/* The white pages behind the text, each with its paper pattern inside the margins. */}
@@ -295,7 +349,7 @@ export default function DocApp() {
       </main>
 
       <div className="doc-chrome">
-        <StatusBar page={page} pages={pages} words={stats?.words ?? 0} zoom={zoom} onZoom={setZoom} min={ZOOM_MIN} max={ZOOM_MAX} />
+        <StatusBar inFormula={inFormula} page={page} pages={pages} words={stats?.words ?? 0} zoom={zoom} onZoom={setZoom} min={ZOOM_MIN} max={ZOOM_MAX} />
       </div>
     </div>
   );

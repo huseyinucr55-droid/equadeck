@@ -159,18 +159,26 @@ test.describe('Document view', () => {
   test('DOC-10 German words inside a formula become symbols', async ({ page }) => {
     await openDoc(page);
     await typeLine(page, 'x');
-    const formula = async (keys: string) => {
+    // A word opens the list; Enter takes the first suggestion.
+    const formula = async (before: string, word: string, after = '') => {
       await page.keyboard.press('Alt+Equal');
       await expect(page.locator('.doc-math math-field').last()).toBeFocused();
       await page.waitForTimeout(150); // the field finishes setting up (a person never types this fast)
-      await page.keyboard.type(keys);
+      await page.keyboard.type(before + word);
+      await expect(page.getByRole('listbox', { name: 'Suggestions' })).toBeVisible();
+      await page.keyboard.press('Enter');
+      await page.keyboard.type(after);
+      await page.keyboard.press('Escape');
       await page.keyboard.press('Escape');
       await page.keyboard.insertText(' ');
     };
-    await formula('summe');
-    await formula('xelementvonA');
-    await formula('unendlich');
-    expect(await fields(page)).toEqual(['\\sum', 'x\\in A', '\\infty']);
+    await formula('', 'summe');
+    await formula('x', 'elementvon', 'A');
+    await formula('', 'unendlich');
+    const v = await fields(page);
+    expect(v[0]).toMatch(/^\\sum/);
+    expect(v[1]).toBe('x\\in A');
+    expect(v[2]).toBe('\\infty');
   });
 
   // Phase 3: real pages and export.
@@ -225,5 +233,90 @@ test.describe('Document view', () => {
     const bytes = readFileSync((await file.path())!);
     expect(bytes.subarray(0, 2).toString()).toBe('PK'); // a zip, as .docx files are
     await expect(page.getByText('Saved for Word')).toBeVisible();
+  });
+
+  // Formulas work like the single-formula editor: words open a list of symbols.
+  const startFormula = async (page: Page) => {
+    await body(page).click();
+    await page.keyboard.press('Alt+Equal');
+    await expect(page.locator('.doc-math math-field').last()).toBeFocused();
+    await page.waitForTimeout(150);
+  };
+
+  test('DOC-13 typing a word in a formula opens suggestions; Enter takes the first, arrows pick another', async ({ page }) => {
+    await openDoc(page);
+    await startFormula(page);
+    await page.keyboard.type('Aäquivalent');
+    const list = page.getByRole('listbox', { name: 'Suggestions' });
+    await expect(list).toBeVisible();
+    await expect(list.getByRole('option').first()).toHaveAttribute('aria-selected', 'true');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await expect(list).toHaveCount(0);
+    await page.keyboard.type('B');
+    expect(await fields(page)).toEqual(['A\\Leftrightarrow B']);
+    // "genau dann" as one word, then the curly braces by name.
+    await page.keyboard.type('genaudann');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('geschweift');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('1');
+    expect(await fields(page)).toEqual(['A\\Leftrightarrow B\\Leftrightarrow\\left\\{1\\right\\}']);
+  });
+
+  test('DOC-14 a word followed by a space is text in the formula; brackets from the ribbon', async ({ page }) => {
+    await openDoc(page);
+    await startFormula(page);
+    await page.keyboard.type('gilt x');
+    expect(await fields(page)).toEqual(['\\text{gilt }x']);
+    await expect(page.getByText(/Esc back to text/)).toBeVisible();
+    await tab(page, 'Insert').click();
+    await page.getByRole('group', { name: 'Brackets' }).getByRole('button', { name: 'absolute value' }).click();
+    await page.keyboard.type('y');
+    expect((await fields(page))[0]).toContain('\\left|y\\right|');
+  });
+
+  test('DOC-15 tables: insert, add a row, delete', async ({ page }) => {
+    await openDoc(page);
+    await body(page).click();
+    await tab(page, 'Insert').click();
+    await page.getByRole('button', { name: 'Table', exact: true }).click();
+    await expect(body(page).locator('table tr')).toHaveCount(3);
+    await page.keyboard.insertText('x');
+    await page.getByRole('button', { name: 'Row below' }).click();
+    await expect(body(page).locator('table tr')).toHaveCount(4);
+    await page.getByRole('button', { name: 'Delete table' }).click();
+    await expect(body(page).locator('table')).toHaveCount(0);
+  });
+
+  test('DOC-16 a template fills a new document', async ({ page }) => {
+    await openDoc(page);
+    await tab(page, 'File').click();
+    await page.getByRole('button', { name: 'Worksheet' }).click();
+    await expect(page.getByLabel('Document title')).toHaveValue('Worksheet');
+    await expect(body(page).locator('h2')).toHaveCount(3);
+    await expect(page.locator('.doc-math-block')).toHaveCount(2);
+    await expect(sheet(page)).toHaveAttribute('data-paper', 'squared');
+  });
+
+  test('DOC-17 backup: save all documents to a file and load them back', async ({ page }) => {
+    await openDoc(page);
+    await typeLine(page, 'Gesichert');
+    await page.getByLabel('Document title').fill('Gesichert');
+    await tab(page, 'File').click();
+    const dl = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Save backup' }).click();
+    const file = await dl;
+    expect(file.suggestedFilename()).toMatch(/^equadeck-backup-\d{4}-\d{2}-\d{2}\.json$/);
+    const { readFileSync } = await import('node:fs');
+    const saved = JSON.parse(readFileSync((await file.path())!, 'utf8'));
+    expect(saved.app).toBe('equadeck');
+    expect(saved.docs[0].title).toBe('Gesichert');
+    // Load a backup with one more document.
+    const extra = { ...saved, docs: [{ ...saved.docs[0], id: 'other', title: 'Aus der Sicherung', updatedAt: Date.now() }] };
+    await page.locator('input[type=file]').setInputFiles({ name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(extra)) });
+    await expect(page.getByText('Backup loaded: 1 new, 0 updated.')).toBeVisible();
+    await page.getByRole('button', { name: 'Open' }).click();
+    await expect(page.getByRole('region', { name: 'Your documents' }).getByRole('button', { name: /^Aus der Sicherung/ })).toBeVisible();
   });
 });

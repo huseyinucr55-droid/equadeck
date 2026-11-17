@@ -225,3 +225,129 @@ export function latexCompletions(ctx: CompletionContext): CompletionResult | nul
   }
   return null;
 }
+
+// --- Suggestions for formulas in the document (/doc) ------------------------
+// The same idea as the list above, for MathLive fields: type a word ("summe",
+// "äquivalent", "genau dann") and pick the symbol. Results are LaTeX with
+// "#?" for the boxes to fill in.
+
+/** Other words people use for the same thing, German and English. */
+const SYNONYMS: Record<string, string[]> = {
+  '\\Leftrightarrow': ['äquivalent', 'gleichwertig', 'genau dann wenn', 'genau dann', 'equivalent', 'iff'],
+  '\\Rightarrow': ['daraus folgt', 'folgt', 'impliziert', 'Folgepfeil', 'then'],
+  '\\Leftarrow': ['folgt aus'],
+  '\\to': ['gegen', 'strebt gegen', 'Pfeil', 'arrow', 'tends to'],
+  '\\approx': ['ungefähr', 'etwa', 'rund'],
+  '\\cdot': ['mal', 'Malpunkt'],
+  '\\times': ['Kreuz', 'Kreuzprodukt', 'kartesisch'],
+  '\\frac': ['Bruch', 'geteilt', 'Quotient'],
+  '\\sqrt': ['Wurzel', 'Quadratwurzel'],
+  '\\infty': ['unendlich'],
+  '\\neq': ['ungleich'],
+  '\\leq': ['kleiner gleich', 'höchstens'],
+  '\\geq': ['größer gleich', 'mindestens'],
+  '\\in': ['Element', 'ist Element von', 'liegt in'],
+  '\\notin': ['kein Element'],
+  '\\sum': ['Summe', 'Summenzeichen'],
+  '\\prod': ['Produkt'],
+  '\\int': ['Integral'],
+  '\\lim': ['Limes', 'Grenzwert'],
+  '\\vec': ['Vektor', 'Pfeil drüber'],
+  '\\partial': ['partiell', 'del'],
+  '\\emptyset': ['leere Menge'],
+  '\\forall': ['für alle', 'für jedes'],
+  '\\exists': ['es gibt', 'existiert'],
+  '\\cup': ['vereinigt', 'Vereinigung'],
+  '\\cap': ['geschnitten', 'Schnitt', 'Schnittmenge'],
+  '\\subseteq': ['Teilmenge'],
+  '\\mathbb{R}': ['reelle Zahlen', 'R'],
+  '\\mathbb{N}': ['natürliche Zahlen', 'N'],
+  '\\mathbb{Z}': ['ganze Zahlen', 'Z'],
+  '\\mathbb{Q}': ['rationale Zahlen', 'Q'],
+  '\\mathbb{C}': ['komplexe Zahlen', 'C'],
+  '\\pm': ['plus minus'],
+  '\\degree': ['Grad'],
+};
+
+/** Brackets that grow with their content; hard to type on a German keyboard. */
+const BRACKETS: { latex: string; meaning: string; words: string[] }[] = [
+  { latex: '\\left\\{#?\\right\\}', meaning: 'curly braces', words: ['geschweifte Klammern', 'geschweift', 'Mengenklammer', 'Menge', 'Klammer'] },
+  { latex: '\\left(#?\\right)', meaning: 'parentheses', words: ['runde Klammern', 'Klammer', 'Klammern'] },
+  { latex: '\\left[#?\\right]', meaning: 'square brackets', words: ['eckige Klammern', 'Intervall', 'Klammer'] },
+  { latex: '\\left|#?\\right|', meaning: 'absolute value', words: ['Betrag', 'Betragsstriche'] },
+  { latex: '\\left\\lVert#?\\right\\rVert', meaning: 'norm', words: ['Norm', 'Doppelstriche'] },
+  { latex: '\\left\\langle#?\\right\\rangle', meaning: 'angle brackets', words: ['spitze Klammern', 'Skalarprodukt'] },
+];
+
+export type Suggestion = { latex: string; meaning: string };
+
+/** "\frac{#0}{}" -> "\frac{#?}{#?}": every empty slot becomes a box to fill in. */
+const toBoxes = (tpl: string) => tpl.trim().replace(/#0/g, '#?').replace(/\{\}/g, '{#?}').replace(/\[\]/g, '[#?]');
+/** The key a template is known by in SYNONYMS: "\Leftrightarrow", "\mathbb{R}", or "\frac" for templates. */
+const keyOf = (tpl: string) => (tpl.includes('#0') || /\{\}/.test(tpl) ? (tpl.match(/^\\[a-zA-Z]+(\[\])?/)?.[0] ?? tpl.trim()) : tpl.trim());
+/** Same formula whatever the spacing: "\left\{ #? \right\}" = "\left\{#?\right\}". */
+const same = (latex: string) => latex.replace(/\s+/g, '');
+
+type Candidate = { latex: string; meaning: string; terms: string[] };
+const candidates = new Map<Lang, Candidate[]>();
+function suggestionList(lang: Lang): Candidate[] {
+  let list = candidates.get(lang);
+  if (list) return list;
+  const seen = new Set<string>();
+  list = [];
+  for (const s of ALL_SYMBOLS) {
+    if (!s.insert.startsWith('\\')) continue; // ^{}, _{} … are typed with ^ and _ anyway
+    const latex = toBoxes(s.insert);
+    if (seen.has(same(latex))) continue;
+    seen.add(same(latex));
+    const key = keyOf(s.insert);
+    const name = key.replace(/^\\/, '');
+    list.push({
+      latex,
+      meaning: tr(s.name, lang),
+      terms: [norm(s.name), norm(tr(s.name, 'de')), norm(name), ...(SYNONYMS[key] ?? []).map(norm), ...(s.keywords ?? '').split(/\s+/).map(norm)].filter(Boolean),
+    });
+  }
+  // The extra commands of the single-formula editor too (cases, aligned lines,
+  // matrix, display fraction, upright, colour). Chemistry (\ce, \pu) and the
+  // physics package are left out: the formula editor on the page can't draw them.
+  for (const [label, tpl, meaning] of EXTRA) {
+    if (/^\\(ce|pu|dv|pdv|vb|abs|norm|ket|bra|bbox)\b/.test(label)) continue;
+    const latex = toBoxes(tpl);
+    if (seen.has(same(latex))) continue;
+    seen.add(same(latex));
+    const key = keyOf(tpl);
+    list.push({
+      latex,
+      meaning: tr(meaning, lang),
+      terms: [norm(meaning), norm(tr(meaning, 'de')), norm(key.replace(/^\\/, '')), ...(SYNONYMS[key] ?? []).map(norm)].filter(Boolean),
+    });
+  }
+  for (const b of BRACKETS) {
+    // The palette may already have this bracket: add our words to that entry.
+    const existing = list.find((c) => same(c.latex) === same(b.latex));
+    if (existing) existing.terms.push(...b.words.map(norm));
+    else list.push({ latex: b.latex, meaning: tr(b.meaning, lang), terms: [norm(b.meaning), ...b.words.map(norm)] });
+  }
+  candidates.set(lang, list);
+  return list;
+}
+
+/** Symbols for a word typed in a formula, best first (at most `limit`). */
+export function suggestFor(word: string, limit = 8): Suggestion[] {
+  const q = norm(word);
+  if (q.length < 3) return [];
+  const scored = suggestionList(getLang())
+    .map((c) => {
+      let r = -1;
+      for (const t of c.terms) {
+        if (t === q) r = Math.max(r, 4);
+        else if (t.startsWith(q)) r = Math.max(r, 3);
+        else if (q.length >= 4 && t.includes(q)) r = Math.max(r, 1);
+      }
+      return { c, r };
+    })
+    .filter((x) => x.r >= 0)
+    .sort((a, b) => b.r - a.r || a.c.meaning.length - b.c.meaning.length);
+  return scored.slice(0, limit).map(({ c }) => ({ latex: c.latex, meaning: c.meaning }));
+}

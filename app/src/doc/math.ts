@@ -7,50 +7,11 @@ import { Node, mergeAttributes, type Editor } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
 import { MathfieldElement } from 'mathlive';
 import 'mathlive/fonts.css';
+import { attachSuggestions } from './math-suggest';
 
 // Fonts come bundled through fonts.css (no CDN); no keyboard click sounds.
 MathfieldElement.fontsDirectory = null;
 MathfieldElement.soundsDirectory = null;
-
-/** German (and a few English) words typed inside a formula that become symbols. */
-export const WORD_SHORTCUTS: Record<string, string> = {
-  summe: '\\sum',
-  produkt: '\\prod',
-  integral: '\\int',
-  unendlich: '\\infty',
-  wurzel: '\\sqrt{#?}',
-  limes: '\\lim',
-  elementvon: '\\in',
-  keinelementvon: '\\notin',
-  füralle: '\\forall',
-  fueralle: '\\forall',
-  esexistiert: '\\exists',
-  teilmenge: '\\subseteq',
-  vereinigt: '\\cup',
-  geschnitten: '\\cap',
-  leeremenge: '\\emptyset',
-  ungleich: '\\neq',
-  kleinergleich: '\\leq',
-  größergleich: '\\geq',
-  groessergleich: '\\geq',
-  ungefähr: '\\approx',
-  ungefaehr: '\\approx',
-  folgt: '\\Rightarrow',
-  genaudann: '\\Leftrightarrow',
-  partiell: '\\partial',
-  mal: '\\cdot',
-};
-
-/**
- * MathLive's own shortcuts plus the German words. Built-in ones that are the
- * start of a German word ("sum" in "summe", "int" in "integral") would fire
- * halfway through typing it, so they make way.
- */
-function withGermanWords<T extends object>(builtIn: Readonly<Record<string, T | string>>): Record<string, T | string> {
-  const words = Object.keys(WORD_SHORTCUTS);
-  const kept = Object.fromEntries(Object.entries(builtIn).filter(([k]) => !words.some((w) => w !== k && w.startsWith(k))));
-  return { ...kept, ...WORD_SHORTCUTS };
-}
 
 /** Ready-made formulas for the Insert tab; #? is a box to fill in. */
 export const TEMPLATES = {
@@ -147,11 +108,15 @@ function makeNode(name: 'mathInline' | 'mathBlock', display: boolean) {
           'mount',
           () => {
             mf.smartFence = true;
-            mf.inlineShortcuts = withGermanWords(mf.inlineShortcuts);
+            // Words are handled by the suggestion list (math-suggest.ts). MathLive's
+            // own letter shortcuts would fire halfway through a word ("pi" in
+            // "spitze", "sum" in "summe"), so only symbol ones like "<=" stay.
+            mf.inlineShortcuts = Object.fromEntries(Object.entries(mf.inlineShortcuts).filter(([k]) => !/[a-zA-Z]/.test(k)));
           },
           { once: true },
         );
         dom.append(mf);
+        attachSuggestions(mf);
 
         let current = node;
         const pos = () => (typeof getPos === 'function' ? getPos() : undefined);
