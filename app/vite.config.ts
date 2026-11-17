@@ -23,7 +23,7 @@ const spaFallback = (): Plugin => {
       copyFileSync(index, resolve(outDir, '404.html'));
       // Real files for the known pages, so they answer 200 (not 404) for
       // search engines and link previews; main.tsx picks the page by path.
-      for (const page of ['about', 'privacy', 'terms']) {
+      for (const page of ['about', 'privacy', 'terms', 'doc']) {
         mkdirSync(resolve(outDir, page), { recursive: true });
         copyFileSync(index, resolve(outDir, page, 'index.html'));
       }

@@ -256,6 +256,11 @@ export default function App() {
             <span className="truncate">{APP_NAME}</span>
           </h1>
           <nav aria-label={t('Main')} className="ml-auto flex items-center gap-1">
+            <a href={to('/doc')} className="inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-fg hover:bg-surface">
+              <FileText aria-hidden className="size-4" />
+              <span className="max-sm:hidden">{t('Document')}</span>
+              <span className="sr-only sm:hidden">{t('Document')}</span>
+            </a>
             <Button variant="ghost" size="sm" icon={<BookOpen aria-hidden className="size-4" />} aria-label={t('Reference')} onClick={() => setPanel('reference')}>
               <span className="max-sm:hidden">{t('Reference')}</span>
             </Button>
