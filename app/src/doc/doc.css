@@ -297,6 +297,9 @@
   --contains-highlight-background-color: rgba(15, 118, 110, 0.08);
   --placeholder-color: #0f766e;
   --placeholder-opacity: 0.6;
+  /* Words inside a formula look like normal text, not like a grey box. */
+  --text-highlight-background-color: transparent;
+  --contains-highlight-background-color: transparent;
 }
 .doc-math math-field::part(menu-toggle),
 .doc-math math-field::part(virtual-keyboard-toggle) { display: none; }

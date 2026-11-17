@@ -276,6 +276,15 @@ test.describe('Document view', () => {
     expect((await fields(page))[0]).toContain('\\left|y\\right|');
   });
 
+  test('DOC-18 a formula with only words becomes normal text when you leave it', async ({ page }) => {
+    await openDoc(page);
+    await startFormula(page);
+    await page.keyboard.type('sei und ');
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.doc-math')).toHaveCount(0);
+    await expect(body(page)).toContainText('sei und');
+  });
+
   test('DOC-15 tables: insert, add a row, delete', async ({ page }) => {
     await openDoc(page);
     await body(page).click();

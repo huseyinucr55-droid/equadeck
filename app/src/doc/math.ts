@@ -29,6 +29,14 @@ export function setMathLanguage(lang: string) {
   MathfieldElement.locale = lang;
 }
 
+/** "\text{sei }\text{und}" -> "sei und"; null when the formula has any maths in it. */
+export function textOnly(latex: string): string | null {
+  const rest = latex.replace(/\\text\{[^{}]*\}/g, '').replace(/\\[ ,;:!]|~|\s/g, '');
+  if (rest) return null;
+  const words = [...latex.matchAll(/\\text\{([^{}]*)\}/g)].map((m) => m[1]).join('');
+  return words.replace(/\\textbackslash /g, '\\').replace(/\s+/g, ' ').trim();
+}
+
 /** The formula the user is typing in right now, if any. */
 export function activeMathField(): MathfieldElement | null {
   const host = document.activeElement;
@@ -135,9 +143,21 @@ function makeNode(name: 'mathInline' | 'mathBlock', display: boolean) {
           const at = pos();
           if (at === undefined) return;
           const { state, view } = editor;
+          const latex = mf.getValue('latex').trim();
           // An empty formula disappears when you leave it.
-          if (!mf.getValue('latex').trim()) {
+          if (!latex) {
             view.dispatch(state.tr.delete(at, at + current.nodeSize));
+            view.focus();
+            return;
+          }
+          // Only words ("sei und")? Then it was meant as text: put plain text there.
+          const words = textOnly(latex);
+          if (words !== null) {
+            const content = words ? state.schema.text(words) : null;
+            const replacement = display ? state.schema.nodes.paragraph.create(null, content) : content;
+            const tr = replacement ? state.tr.replaceWith(at, at + current.nodeSize, replacement) : state.tr.delete(at, at + current.nodeSize);
+            const end = at + (replacement ? (display ? replacement.nodeSize - 1 : replacement.nodeSize) : 0);
+            view.dispatch(tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(end, tr.doc.content.size)))));
             view.focus();
             return;
           }
