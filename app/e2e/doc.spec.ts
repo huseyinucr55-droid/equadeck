@@ -112,4 +112,63 @@ test.describe('Document view', () => {
     await page.getByRole('link', { name: 'Einzelne Formel' }).click();
     await expect(page).toHaveURL(/\/$/);
   });
+
+  // Phase 2: formulas typed straight onto the page.
+  const fields = (page: Page) =>
+    page.evaluate(() => [...document.querySelectorAll('.doc-math math-field')].map((m) => (m as HTMLElement & { value: string }).value));
+
+  test('DOC-8 Alt+= starts a formula in the text; it is kept after a reload', async ({ page }) => {
+    await openDoc(page);
+    await typeLine(page, 'Es gilt ');
+    await page.keyboard.press('Alt+Equal');
+    await expect(page.locator('.doc-math-inline math-field')).toBeFocused();
+    // After "a^2" the cursor drops back from the exponent by itself.
+    await page.keyboard.type('a^2+b^2');
+    await page.keyboard.press('Escape');
+    await page.keyboard.insertText(' fertig');
+    await expect(body(page)).toContainText('fertig');
+    expect(await fields(page)).toEqual(['a^2+b^2']);
+    await axe(page);
+    await page.waitForTimeout(700);
+    await page.reload();
+    await expect(page.locator('.doc-math-inline math-field')).toHaveCount(1);
+    expect(await fields(page)).toEqual(['a^2+b^2']);
+  });
+
+  test('DOC-9 Insert tab: fraction with boxes, symbols, a formula on its own line', async ({ page }) => {
+    await openDoc(page);
+    await body(page).click();
+    await tab(page, 'Insert').click();
+    await page.getByRole('group', { name: 'Structures' }).getByRole('button', { name: 'Fraction' }).click();
+    await expect(page.locator('.doc-math-inline math-field')).toBeFocused();
+    await page.keyboard.type('1');
+    await page.keyboard.press('Tab');
+    await page.keyboard.type('2');
+    expect(await fields(page)).toEqual(['\\frac12']);
+    // A symbol goes into the formula you are typing in.
+    await page.keyboard.press('ArrowRight');
+    await page.getByRole('button', { name: 'element of', exact: true }).click();
+    expect(await fields(page)).toEqual(['\\frac12\\in']);
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'On its own line' }).click();
+    await expect(page.locator('.doc-math-block math-field')).toBeFocused();
+    await page.keyboard.type('x');
+    await expect(page.locator('.doc-math-block')).toHaveCount(1);
+  });
+
+  test('DOC-10 German words inside a formula become symbols', async ({ page }) => {
+    await openDoc(page);
+    await typeLine(page, 'x');
+    const formula = async (keys: string) => {
+      await page.keyboard.press('Alt+Equal');
+      await expect(page.locator('.doc-math math-field').last()).toBeFocused();
+      await page.keyboard.type(keys);
+      await page.keyboard.press('Escape');
+      await page.keyboard.insertText(' ');
+    };
+    await formula('summe');
+    await formula('xelementvonA');
+    await formula('unendlich');
+    expect(await fields(page)).toEqual(['\\sum', 'x\\in A', '\\infty']);
+  });
 });

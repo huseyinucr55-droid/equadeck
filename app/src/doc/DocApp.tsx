@@ -8,6 +8,7 @@ import { LangSwitch } from '../components/ui';
 import { useLang, useT } from '../lib/i18n';
 import { to } from '../lib/paths';
 import { extensions } from './extensions';
+import { setMathLanguage } from './math';
 import { Ribbon } from './Ribbon';
 import { StatusBar } from './StatusBar';
 import { MARGIN_MM, loadCurrentId, loadDocs, newDoc, saveCurrentId, saveDocs, type Doc } from './store';
@@ -92,6 +93,8 @@ export default function DocApp() {
     editor.commands.setContent(docRef.current.content ?? '', { emitUpdate: false });
     editor.commands.focus('start');
   }, [editor, currentId]);
+
+  useEffect(() => setMathLanguage(lang), [lang]);
 
   useEffect(() => {
     editor?.setOptions({ editorProps: { attributes: { 'aria-label': t('Document text'), class: 'doc-content', spellcheck: 'true', lang } } });

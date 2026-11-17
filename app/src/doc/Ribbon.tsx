@@ -1,7 +1,8 @@
 // The ribbon: tabs File / Home / Insert / Layout / View, each one row of
 // grouped controls. Buttons keep the editor's selection (mousedown is
 // prevented) and show their state with aria-pressed.
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
+import type { MathfieldElement } from 'mathlive';
 import { useEditorState, type Editor } from '@tiptap/react';
 import {
   AlignCenter, AlignJustify, AlignLeft, AlignRight, Baseline, Bold, Copy, Eraser, FileCode, FileDown, FilePlus, FileText,
@@ -11,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useT } from '../lib/i18n';
 import type { Doc, Margins, Orientation, Paper } from './store';
+import { TEMPLATES, activeMathField } from './math';
 
 export const TEXT_COLOURS = ['#000000', '#c92a2a', '#1864ab', '#2b8a3e', '#e8590c', '#7048e8', '#868e96', '#0b7285'];
 export const HIGHLIGHTS = ['#fff3bf', '#d3f9d8', '#d0ebff', '#ffdeeb', '#e9ecef'];
@@ -22,6 +24,44 @@ const FONTS: [string, string][] = [
 ];
 
 type Tab = 'file' | 'home' | 'insert' | 'layout' | 'view';
+
+const STRUCTURES: [keyof typeof TEMPLATES, string, string][] = [
+  ['fraction', 'Fraction', '½'],
+  ['root', 'Root', '√'],
+  ['power', 'Power', 'xⁿ'],
+  ['integral', 'Integral', '∫'],
+  ['sum', 'Sum', 'Σ'],
+  ['limit', 'Limit', 'lim'],
+  ['matrix', 'Matrix', '[ ]'],
+  ['cases', 'Cases', '{'],
+];
+
+const SYMBOLS: [string, string, string][] = [
+  ['\\infty', '∞', 'infinity'],
+  ['\\pi', 'π', 'pi'],
+  ['\\pm', '±', 'plus minus'],
+  ['\\cdot', '·', 'dot'],
+  ['\\leq', '≤', 'less or equal'],
+  ['\\geq', '≥', 'greater or equal'],
+  ['\\neq', '≠', 'not equal'],
+  ['\\approx', '≈', 'approximately equal'],
+  ['\\in', '∈', 'element of'],
+  ['\\notin', '∉', 'not an element of'],
+  ['\\subseteq', '⊆', 'subset or equal'],
+  ['\\cup', '∪', 'union'],
+  ['\\cap', '∩', 'intersection'],
+  ['\\emptyset', '∅', 'empty set'],
+  ['\\forall', '∀', 'for all'],
+  ['\\exists', '∃', 'there exists'],
+  ['\\Rightarrow', '⇒', 'implies'],
+  ['\\Leftrightarrow', '⇔', 'if and only if'],
+  ['\\mathbb{R}', 'ℝ', 'real numbers'],
+  ['\\mathbb{N}', 'ℕ', 'natural numbers'],
+  ['\\alpha', 'α', 'alpha'],
+  ['\\beta', 'β', 'beta'],
+  ['\\Delta', 'Δ', 'Delta'],
+  ['\\lambda', 'λ', 'lambda'],
+];
 
 export type RibbonProps = {
   editor: Editor;
@@ -109,6 +149,20 @@ export function Ribbon(p: RibbonProps) {
     }),
   });
   const c = () => editor.chain().focus();
+  // The formula that had focus when a ribbon button was pressed (pressing it
+  // can move focus away before the click arrives).
+  const fieldAtPress = useRef<MathfieldElement | null>(null);
+  /** Into the formula you are typing in, or as a new formula at the cursor. */
+  const math = (latex: string, block = false) => {
+    const mf = fieldAtPress.current?.isConnected ? fieldAtPress.current : activeMathField();
+    fieldAtPress.current = null;
+    if (mf && latex) {
+      mf.focus();
+      mf.insert(latex, { selectionMode: 'placeholder', focus: true });
+      return;
+    }
+    editor.chain().focus().insertMath(latex, block).run();
+  };
 
   const tabs: [Tab, string][] = [
     ['file', t('File')],
@@ -119,7 +173,7 @@ export function Ribbon(p: RibbonProps) {
   ];
 
   return (
-    <section className="ribbon" aria-label={t('Ribbon')}>
+    <section className="ribbon" aria-label={t('Ribbon')} onPointerDownCapture={() => (fieldAtPress.current = activeMathField())}>
       <div role="tablist" aria-label={t('Ribbon')} className="ribbon-tabs">
         {tabs.map(([id, label]) => (
           <button
@@ -232,11 +286,28 @@ export function Ribbon(p: RibbonProps) {
         )}
 
         {tab === 'insert' && (
-          <Group label={t('Insert')}>
-            <Btn wide label={t('Page break')} icon={<SeparatorHorizontal aria-hidden className="size-4" />} onClick={() => c().setPageBreak().run()} />
-            <Btn wide label={t('Horizontal line')} icon={<Minus aria-hidden className="size-4" />} onClick={() => c().setHorizontalRule().run()} />
-            <Btn wide label={t('Formula')} icon={<Sigma aria-hidden className="size-4" />} disabled title={t('Coming in the next update')} />
-          </Group>
+          <>
+            <Group label={t('Formula')}>
+              <Btn wide label={t('Formula')} icon={<Sigma aria-hidden className="size-4" />} title={t('Formula in the text (Alt+=)')} onClick={() => math('')} />
+              <Btn wide label={t('On its own line')} icon={<AlignCenter aria-hidden className="size-4" />} onClick={() => math('', true)} />
+            </Group>
+            <Group label={t('Structures')}>
+              {STRUCTURES.map(([key, label, preview]) => (
+                <Btn key={key} wide label={t(label)} icon={<span aria-hidden className="ribbon-math-preview">{preview}</span>} onClick={() => math(TEMPLATES[key])} />
+              ))}
+            </Group>
+            <Group label={t('Symbols')}>
+              {SYMBOLS.map(([latex, glyph, name]) => (
+                <button key={latex} type="button" className="ribbon-btn ribbon-symbol" aria-label={t(name)} title={t(name)} onMouseDown={keep} onClick={() => math(latex)}>
+                  {glyph}
+                </button>
+              ))}
+            </Group>
+            <Group label={t('Page')}>
+              <Btn wide label={t('Page break')} icon={<SeparatorHorizontal aria-hidden className="size-4" />} onClick={() => c().setPageBreak().run()} />
+              <Btn wide label={t('Horizontal line')} icon={<Minus aria-hidden className="size-4" />} onClick={() => c().setHorizontalRule().run()} />
+            </Group>
+          </>
         )}
 
         {tab === 'layout' && (

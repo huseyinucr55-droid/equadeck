@@ -5,6 +5,7 @@ import { Color, FontFamily, FontSize, TextStyle } from '@tiptap/extension-text-s
 import Highlight from '@tiptap/extension-highlight';
 import TextAlign from '@tiptap/extension-text-align';
 import { Placeholder } from '@tiptap/extensions';
+import { MathBlock, MathInline } from './math';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -41,5 +42,7 @@ export function extensions(placeholder: string) {
     TextAlign.configure({ types: ['heading', 'paragraph'] }),
     Placeholder.configure({ placeholder }),
     PageBreak,
+    MathInline,
+    MathBlock,
   ];
 }

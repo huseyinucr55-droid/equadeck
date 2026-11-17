@@ -122,6 +122,8 @@
   padding: 0;
 }
 .ribbon-swatch-none { background: linear-gradient(135deg, #fff 45%, #c92a2a 45%, #c92a2a 55%, #fff 55%) !important; }
+.ribbon-symbol { min-width: 2rem; font-family: 'Cambria Math', 'STIX Two Math', serif; font-size: 1.05rem; }
+.ribbon-math-preview { font-family: 'Cambria Math', 'STIX Two Math', serif; font-size: 1rem; min-width: 1rem; text-align: center; }
 .ribbon-readout { min-width: 3rem; text-align: center; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
 .ribbon-margin-icon { width: 0.9rem; height: 1.1rem; border: 1.5px solid currentColor; border-radius: 2px; box-shadow: inset 0 0 0 2px var(--lx-color-surface); }
 .ribbon-margin-icon[data-m='narrow'] { box-shadow: inset 0 0 0 1px var(--lx-color-surface); }
@@ -235,6 +237,37 @@
   position: absolute;
 }
 .doc-content .ProseMirror-selectednode { outline: 2px solid var(--lx-color-focus); }
+
+/* --- Formulas on the page (MathLive) ---------------------------------------- */
+.doc-math math-field {
+  display: inline-block;
+  min-width: 1.5em;
+  padding: 0 2px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: #15181d;
+  font-size: 1.1em;
+  vertical-align: middle;
+  --caret-color: #0f766e;
+  --selection-background-color: #ccfbf1;
+  --contains-highlight-background-color: rgba(15, 118, 110, 0.08);
+  --placeholder-color: #0f766e;
+  --placeholder-opacity: 0.6;
+}
+.doc-math math-field::part(menu-toggle),
+.doc-math math-field::part(virtual-keyboard-toggle) { display: none; }
+/* On iPad and phones the maths keyboard opens by itself; keep its toggle too. */
+@media (pointer: coarse) {
+  .doc-math math-field:focus-within::part(virtual-keyboard-toggle) { display: flex; }
+}
+.doc-math math-field:focus-within { background: rgba(15, 118, 110, 0.07); outline: 1px solid rgba(15, 118, 110, 0.4); }
+.doc-math-block { display: flex; justify-content: center; margin: 0.6em 0; }
+.doc-math-block math-field { font-size: 1.25em; }
+.doc-math.is-selected math-field { outline: 2px solid var(--lx-color-focus); }
+@media print {
+  .doc-math math-field { background: none !important; outline: none !important; }
+}
 
 /* --- Status bar ------------------------------------------------------------ */
 .doc-statusbar {

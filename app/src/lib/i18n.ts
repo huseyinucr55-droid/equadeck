@@ -536,6 +536,12 @@ const DE: Record<string, string> = {
   'derivative': 'Ableitung', 'partial derivative': 'partielle Ableitung', 'bold vector': 'fetter Vektor',
   'ket': 'Ket', 'bra': 'Bra',
 
+  // Formulas on the page (/doc, phase 2)
+  'Formula in the text (Alt+=)': 'Formel im Text (Alt+=)', 'On its own line': 'Eigene Zeile', 'Structures': 'Strukturen',
+  'Fraction': 'Bruch', 'Root': 'Wurzel', 'Power': 'Hochzahl', 'Integral': 'Integral', 'Sum': 'Summe', 'Limit': 'Grenzwert',
+  'Cases': 'Fallunterscheidung', 'approximately equal': 'ungefähr gleich', 'not an element of': 'kein Element von',
+  'there exists': 'es existiert', 'real numbers': 'reelle Zahlen', 'Delta': 'Delta (groß)',
+
   // Document view (/doc)
   'Document': 'Dokument', 'Single formula': 'Einzelne Formel', 'Ribbon': 'Menüband',
   'File': 'Datei', 'Home': 'Start', 'Layout': 'Layout', 'View': 'Ansicht',
