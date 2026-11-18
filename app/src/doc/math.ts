@@ -64,8 +64,10 @@ function focusFieldAt(editor: Editor, pos: number, atStart = false, tries = 6, d
   // Focus right away so the next key lands in the formula; check again a few
   // times in case the editor's own focus handling (a frame later) took it back.
   const attempt = () => {
-    const dom = editor.view.nodeDOM(pos) as HTMLElement | null;
-    const mf = dom?.querySelector('math-field') as MathfieldElement | null;
+    const dom = editor.view.nodeDOM(pos);
+    // Not an element (e.g. a text node in a table cell while the edit is still
+    // being applied): nothing to focus yet, try again shortly.
+    const mf = dom instanceof HTMLElement ? (dom.querySelector('math-field') as MathfieldElement | null) : null;
     if (mf && document.activeElement !== mf) {
       mf.focus();
       if (atStart) mf.position = 0;
@@ -76,7 +78,9 @@ function focusFieldAt(editor: Editor, pos: number, atStart = false, tries = 6, d
     if (tries > 1) focusFieldAt(editor, pos, atStart, tries - 1, 40);
   };
   if (delay) setTimeout(attempt, delay);
-  else attempt();
+  // Right after the current edit is applied (a command runs before its change
+  // is dispatched), still before the next key press.
+  else queueMicrotask(attempt);
 }
 
 function makeNode(name: 'mathInline' | 'mathBlock', display: boolean) {

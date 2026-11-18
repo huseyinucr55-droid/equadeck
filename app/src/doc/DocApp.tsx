@@ -77,7 +77,7 @@ export default function DocApp() {
   }, []);
 
   const editor = useEditor({
-    extensions: extensions(t('Start typing…')),
+    extensions: extensions('Start typing…'), // translated on display (follows the language switch)
     content: doc.content ?? '',
     editorProps: { attributes: { 'aria-label': t('Document text'), class: 'doc-content', spellcheck: 'true', lang } },
     onUpdate: ({ editor: e }) => {

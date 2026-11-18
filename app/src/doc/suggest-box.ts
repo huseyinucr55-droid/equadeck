@@ -4,6 +4,13 @@
 import { convertLatexToMarkup } from 'mathlive';
 import type { Suggestion } from '../lib/completions';
 
+/** "\frac{#?}{#?}" -> "\frac{a}{b}", for a preview you can recognise. */
+function previewLatex(latex: string): string {
+  const letters = ['a', 'b', 'c', 'd', 'e', 'f'];
+  let i = 0;
+  return latex.replace(/#\?/g, () => letters[i++ % letters.length]);
+}
+
 let box: HTMLDivElement | null = null;
 // Who shows the list right now (a formula or the text): each one only closes
 // its own list, so the text editor noticing a change doesn't hide a formula's.
@@ -32,7 +39,9 @@ export function showSuggestionBox(items: Suggestion[], index: number, under: DOM
       const sym = document.createElement('span');
       sym.className = 'doc-suggest-symbol';
       try {
-        sym.innerHTML = convertLatexToMarkup(s.latex.replace(/#\?/g, '\\placeholder{}'));
+        // Preview with letters in the boxes: an empty box under a line or brace
+        // shows nothing (underline) or stretches across the screen (underbrace).
+        sym.innerHTML = convertLatexToMarkup(previewLatex(s.latex));
       } catch {
         sym.textContent = s.latex;
       }

@@ -296,7 +296,20 @@
   cursor: pointer;
 }
 .doc-suggest-item[aria-selected='true'] { background: var(--lx-color-accent-soft); }
-.doc-suggest-symbol { min-width: 2.5rem; text-align: center; font-size: 1.05rem; }
+/* The preview stays inside its cell (stretchy braces and arrows used to reach across the page). */
+.doc-suggest-symbol {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 3.5rem;
+  width: 3.5rem;
+  max-height: 2.6rem;
+  overflow: hidden;
+  font-size: 1rem;
+}
+.doc-suggest-symbol > * { max-width: 100%; }
+.doc-suggest-label { flex: 1; min-width: 0; }
 .doc-suggest-label { color: var(--lx-color-text-muted); }
 @media (pointer: coarse) { .doc-suggest-item { padding: 0.7rem 0.8rem; } }
 

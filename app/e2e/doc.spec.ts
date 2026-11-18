@@ -421,6 +421,44 @@ test.describe('Document view', () => {
     expect(v).not.toContain('\\textbackslash');
   });
 
+  test('DOC-24 bugs found in the hunt stay fixed', async ({ page }) => {
+    await openDoc(page);
+    await page.getByRole('button', { name: /Language: English/ }).click();
+    // The placeholder follows the language switch.
+    await expect(page.locator('.doc-content p.is-editor-empty')).toHaveAttribute('data-placeholder', 'Schreib einfach los…');
+    const text = page.getByRole('textbox', { name: 'Dokumenttext' });
+    await text.click();
+    // Everyday words don't open the list (no "und" -> underline).
+    await page.keyboard.type('Seien A und B');
+    await expect(page.locator('.doc-suggest')).toHaveCount(0);
+    // Previews stay inside the list.
+    await page.keyboard.type(' unter');
+    const list = page.locator('.doc-suggest');
+    await expect(list).toBeVisible();
+    const inside = await page.evaluate(() => {
+      const box = document.querySelector('.doc-suggest')!.getBoundingClientRect();
+      return [...document.querySelectorAll('.doc-suggest-symbol')].every((s) => {
+        const r = s.getBoundingClientRect();
+        return r.left >= box.left - 1 && r.right <= box.right + 1;
+      });
+    });
+    expect(inside).toBe(true);
+    await page.keyboard.press('Escape');
+    // Ctrl+Z after taking a suggestion takes back only the symbol.
+    await page.keyboard.type(' äqu');
+    await page.keyboard.press('Enter');
+    expect(await fields(page)).toEqual(['\\equiv']);
+    await page.keyboard.press('ControlOrMeta+z');
+    expect(await fields(page)).toEqual([]);
+    await expect(text).toContainText('Seien A und B unter äqu');
+    // A suggestion inside a table cell becomes a formula there.
+    await tab(page, 'Einfügen').click();
+    await page.getByRole('button', { name: 'Tabelle', exact: true }).click();
+    await page.keyboard.type('bruch');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('td math-field, th math-field').first()).toBeFocused();
+  });
+
   test('DOC-15 tables: insert, add a row, delete', async ({ page }) => {
     await openDoc(page);
     await body(page).click();

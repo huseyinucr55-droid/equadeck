@@ -6,6 +6,7 @@
 // a finished one (⇔) lets you go on writing text after it.
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { closeHistory } from '@tiptap/pm/history';
 import type { EditorView } from '@tiptap/pm/view';
 import { suggestFor, type Suggestion } from '../lib/completions';
 import { hideSuggestionBox, showSuggestionBox } from './suggest-box';
@@ -28,6 +29,13 @@ export function setTextSuggestions(on: boolean) {
   }
   if (!on) hideSuggestionBox();
 }
+
+// Everyday words that happen to name a symbol (∧ "und", ¬ "nicht", · "mal"):
+// alone they are just words in a sentence, so they don't open the list.
+// As part of a phrase ("für alle", "es gibt") they still do.
+const EVERYDAY = new Set(
+  'und oder nicht mal mit für fuer aus auf ist sind sein seien sei wenn dann weil also gilt alle jede jeder eine einer eines dass die der das den dem des and not the for all with then'.split(' '),
+);
 
 const L = 'A-Za-zÄÖÜäöüß';
 // The last one to three words before the cursor, the last with 3+ letters.
@@ -71,7 +79,17 @@ export const TextSuggestions = Extension.create({
       if (!choice || !range) return;
       const { from, to } = range;
       close();
-      editor.chain().focus().setTextSelection({ from, to }).insertMath(choice.latex, false, !choice.latex.includes('#?')).run();
+      editor
+        .chain()
+        .focus()
+        // Its own undo step: Ctrl+Z takes back the symbol, not everything typed before it.
+        .command(({ tr }) => {
+          closeHistory(tr);
+          return true;
+        })
+        .setTextSelection({ from, to })
+        .insertMath(choice.latex, false, !choice.latex.includes('#?'))
+        .run();
     };
 
     const update = (view: EditorView) => {
@@ -88,6 +106,7 @@ export const TextSuggestions = Extension.create({
       for (let i = 0; i < parts.length; i++) {
         const phrase = parts.slice(i).join(' ');
         if (phrase.replace(/ /g, '').length < 3) continue;
+        if (!phrase.includes(' ') && EVERYDAY.has(phrase.toLowerCase())) continue;
         const found = suggestFor(phrase, 6, true);
         if (found.length) {
           items = found;

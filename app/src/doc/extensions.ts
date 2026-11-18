@@ -7,6 +7,7 @@ import TextAlign from '@tiptap/extension-text-align';
 import { Placeholder } from '@tiptap/extensions';
 import { MathBlock, MathInline } from './math';
 import { Pagination } from './pagination';
+import { getLang, tr } from '../lib/i18n';
 import { TableKit } from '@tiptap/extension-table';
 import { TextSuggestions } from './text-suggest';
 
@@ -43,7 +44,8 @@ export function extensions(placeholder: string) {
     FontSize,
     Highlight.configure({ multicolor: true }),
     TextAlign.configure({ types: ['heading', 'paragraph'] }),
-    Placeholder.configure({ placeholder }),
+    // A function, so it follows the language switch (it used to stay in the first language).
+    Placeholder.configure({ placeholder: () => tr(placeholder, getLang()) }),
     PageBreak,
     MathInline,
     MathBlock,

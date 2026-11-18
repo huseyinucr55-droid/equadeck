@@ -288,7 +288,10 @@ const keyOf = (tpl: string) => (tpl.includes('#0') || /\{\}/.test(tpl) ? (tpl.ma
 /** Same formula whatever the spacing: "\left\{ #? \right\}" = "\left\{#?\right\}". */
 const same = (latex: string) => latex.replace(/\s+/g, '');
 
-type Candidate = { latex: string; meaning: string; terms: string[] };
+// `terms`: every name (English, German, LaTeX, synonyms), for formulas.
+// `local`: only the UI language's name and the synonyms, for running text, so
+// the German "und" doesn't match the English "underline".
+type Candidate = { latex: string; meaning: string; terms: string[]; local: string[] };
 const candidates = new Map<Lang, Candidate[]>();
 function suggestionList(lang: Lang): Candidate[] {
   let list = candidates.get(lang);
@@ -306,6 +309,7 @@ function suggestionList(lang: Lang): Candidate[] {
       latex,
       meaning: tr(s.name, lang),
       terms: [norm(s.name), norm(tr(s.name, 'de')), norm(name), ...(SYNONYMS[key] ?? []).map(norm), ...(s.keywords ?? '').split(/\s+/).map(norm)].filter(Boolean),
+      local: [norm(tr(s.name, lang)), ...(SYNONYMS[key] ?? []).map(norm)].filter(Boolean),
     });
   }
   // The extra commands of the single-formula editor too (cases, aligned lines,
@@ -321,13 +325,23 @@ function suggestionList(lang: Lang): Candidate[] {
       latex,
       meaning: tr(meaning, lang),
       terms: [norm(meaning), norm(tr(meaning, 'de')), norm(key.replace(/^\\/, '')), ...(SYNONYMS[key] ?? []).map(norm)].filter(Boolean),
+      local: [norm(tr(meaning, lang)), ...(SYNONYMS[key] ?? []).map(norm)].filter(Boolean),
     });
   }
   for (const b of BRACKETS) {
     // The palette may already have this bracket: add our words to that entry.
     const existing = list.find((c) => same(c.latex) === same(b.latex));
-    if (existing) existing.terms.push(...b.words.map(norm));
-    else list.push({ latex: b.latex, meaning: tr(b.meaning, lang), terms: [norm(b.meaning), ...b.words.map(norm)] });
+    if (existing) {
+      existing.terms.push(...b.words.map(norm));
+      existing.local.push(...b.words.map(norm));
+    } else {
+      list.push({
+        latex: b.latex,
+        meaning: tr(b.meaning, lang),
+        terms: [norm(b.meaning), ...b.words.map(norm)],
+        local: [norm(tr(b.meaning, lang)), ...b.words.map(norm)],
+      });
+    }
   }
   candidates.set(lang, list);
   return list;
@@ -344,7 +358,7 @@ export function suggestFor(word: string, limit = 8, prefixOnly = false): Suggest
   const scored = suggestionList(getLang())
     .map((c) => {
       let r = -1;
-      for (const t of c.terms) {
+      for (const t of prefixOnly ? c.local : c.terms) {
         if (t === q) r = Math.max(r, 4);
         else if (t.startsWith(q)) r = Math.max(r, 3);
         else if (!prefixOnly && q.length >= 4 && t.includes(q)) r = Math.max(r, 1);
