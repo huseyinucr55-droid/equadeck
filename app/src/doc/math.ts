@@ -132,6 +132,10 @@ function makeNode(name: 'mathInline' | 'mathBlock', display: boolean) {
             // own letter shortcuts would fire halfway through a word ("pi" in
             // "spitze", "sum" in "summe"), so only symbol ones like "<=" stay.
             mf.inlineShortcuts = Object.fromEntries(Object.entries(mf.inlineShortcuts).filter(([k]) => !/[a-zA-Z]/.test(k)));
+            // No MathLive context menu (right-click / long-press): it laid an
+            // invisible layer over the whole page, and if it got stuck no click
+            // reached anything any more. The ribbon offers all of it.
+            mf.menuItems = [];
           },
           { once: true },
         );

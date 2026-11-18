@@ -365,6 +365,9 @@ button.doc-link { border: 0; background: none; font: inherit; cursor: pointer; }
   /* Words inside a formula look like normal text, not like a grey box. */
   --text-highlight-background-color: transparent;
   --contains-highlight-background-color: transparent;
+  /* Words inside a formula ("für alle", "span") in the same typeface as the
+     text around it, not in the formula font. */
+  --text-font-family: Georgia, 'Times New Roman', serif;
 }
 .doc-math math-field::part(menu-toggle),
 .doc-math math-field::part(virtual-keyboard-toggle) { display: none; }

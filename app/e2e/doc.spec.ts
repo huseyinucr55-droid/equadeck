@@ -537,6 +537,30 @@ test.describe('Document view', () => {
     expect(xml).toContain('(2)');
   });
 
+  test('DOC-27 right-click in a formula leaves the page clickable; words in formulas use the page font', async ({ page }) => {
+    await page.addInitScript(() => {
+      const content = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Es gilt ' }, { type: 'mathInline', attrs: { latex: '\\text{span }\\begin{pmatrix}1&2\\\\3&4\\end{pmatrix}' } }] }] };
+      localStorage.setItem('lx.docs.v1', JSON.stringify([{ id: 'r', title: 'R', updatedAt: 1, content, paper: 'blank', margins: 'normal', orientation: 'portrait' }]));
+      localStorage.setItem('lx.docs.current', 'r');
+    });
+    await page.goto('/doc');
+    const mf = page.locator('.doc-math math-field').first();
+    await mf.waitFor();
+    const box = (await mf.boundingBox())!;
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2, { button: 'right' });
+    await page.waitForTimeout(400);
+    // Nothing of the formula covers the rest of the page.
+    const atRibbon = await page.evaluate(() => document.elementFromPoint(window.innerWidth / 2, 40)?.tagName);
+    expect(atRibbon).not.toBe('MATH-FIELD');
+    await tab(page, 'Insert').click();
+    await expect(tab(page, 'Insert')).toHaveAttribute('aria-selected', 'true');
+    const font = await mf.evaluate((el) => {
+      const t = el.shadowRoot?.querySelector('.ML__text') as HTMLElement | null;
+      return t ? getComputedStyle(t).fontFamily : '';
+    });
+    expect(font).toContain('Georgia');
+  });
+
   test('DOC-15 tables: insert, add a row, delete', async ({ page }) => {
     await openDoc(page);
     await body(page).click();
