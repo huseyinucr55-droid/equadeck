@@ -153,7 +153,9 @@ export async function toDocx(content: JSONContent, doc: Doc): Promise<Blob> {
   const word = new Document({
     creator: 'Equadeck',
     title: doc.title,
-    styles: { default: { document: { run: { font: 'Georgia', size: 24 } } } },
+    // Cambria: Word's own counterpart to its formula font (Cambria Math), so
+    // text and formulas match there too.
+    styles: { default: { document: { run: { font: 'Cambria', size: 24 } } } },
     numbering: {
       config: [
         {

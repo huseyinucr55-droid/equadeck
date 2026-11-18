@@ -21,6 +21,8 @@ export function attachSuggestions(mf: MathfieldElement) {
   // Maths ignores spaces, so "x span" would read as one word "xspan". A space
   // typed after a short variable is remembered here as a word boundary.
   let boundary = -1;
+  // A space typed in maths, waiting to see what comes next.
+  let pendingSpace = false;
 
   /** Letters right before the caret, as typed (not part of a \command or text). */
   const currentWord = (): string => {
@@ -79,7 +81,11 @@ export function attachSuggestions(mf: MathfieldElement) {
   function accept() {
     const choice = items[index];
     if (!choice) return;
-    replaceBeforeCaret(matched, choice.latex, 'placeholder');
+    // A space right before the word goes too: "x ⇔ y" not "x  ⇔ y" (signs
+    // bring their own spacing).
+    const start = mf.position - matched;
+    const spaceBefore = start > 0 && /^\\\s*$/.test(mf.getValue(start - 1, start, 'latex'));
+    replaceBeforeCaret(matched + (spaceBefore ? 1 : 0), choice.latex, 'placeholder');
     close();
   }
 
@@ -123,7 +129,23 @@ export function attachSuggestions(mf: MathfieldElement) {
           stop();
           wordToText(word);
         } else if (mf.mode === 'math') {
-          boundary = mf.position; // "x " — the next letters start a new word
+          // Maths ignores the space bar. Remember it and put in a visible space
+          // only if a number, letter or bracket follows ("1 2", "x y"); before
+          // = + ⇔ … the sign brings its own spacing (no double gaps).
+          stop();
+          pendingSpace = true;
+          boundary = mf.position; // the next letters start a new word: "x span"
+        }
+        return;
+      }
+      if (pendingSpace) {
+        pendingSpace = false;
+        // Right after = + − < ⇔ ≤ … the sign already has its spacing.
+        const prev = mf.getValue(Math.max(0, mf.position - 1), mf.position, 'latex').trim();
+        const afterSign = /^[=+\-<>*/]$|^\\(Leftrightarrow|Rightarrow|Leftarrow|leftrightarrow|rightarrow|leftarrow|to|le|leq|ge|geq|ne|neq|approx|equiv|in|notin|subseteq|subset|supseteq|cup|cap|cdot|times|pm|mp|div|land|lor|mid|sim|cong|coloneq)\b/.test(prev);
+        if (!afterSign && k.length === 1 && /[\p{L}\p{N}(\[|]/u.test(k) && !e.ctrlKey && !e.metaKey && mf.mode === 'math') {
+          mf.insert('\\ ', { mode: 'math', format: 'latex', focus: true });
+          boundary = mf.position;
         }
       }
     },

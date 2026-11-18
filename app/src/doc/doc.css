@@ -267,7 +267,9 @@ button.doc-link { border: 0; background: none; font: inherit; cursor: pointer; }
 
 .doc-content {
   outline: none;
-  font-family: Georgia, 'Times New Roman', serif;
+  /* The same LaTeX-style face as the formulas (bundled with MathLive), so text
+     and maths look like one page of a maths book. */
+  font-family: KaTeX_Main, 'Latin Modern Roman', 'CMU Serif', Georgia, serif;
   font-size: 12pt;
   line-height: 1.5;
   caret-color: #15181d;
@@ -365,9 +367,8 @@ button.doc-link { border: 0; background: none; font: inherit; cursor: pointer; }
   /* Words inside a formula look like normal text, not like a grey box. */
   --text-highlight-background-color: transparent;
   --contains-highlight-background-color: transparent;
-  /* Words inside a formula ("für alle", "span") in the same typeface as the
-     text around it, not in the formula font. */
-  --text-font-family: Georgia, 'Times New Roman', serif;
+  /* Words inside a formula ("für alle", "span") in the same face as the text around it. */
+  --text-font-family: KaTeX_Main, 'Latin Modern Roman', 'CMU Serif', Georgia, serif;
 }
 .doc-math math-field::part(menu-toggle),
 .doc-math math-field::part(virtual-keyboard-toggle) { display: none; }

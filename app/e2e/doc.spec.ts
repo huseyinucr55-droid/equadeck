@@ -416,7 +416,8 @@ test.describe('Document view', () => {
     await page.getByRole('group', { name: 'Matrix' }).getByRole('button', { name: 'Matrix' }).click();
     await page.getByRole('button', { name: '3 × 1' }).click();
     const v = (await fields(page))[0];
-    expect(v.startsWith('x\\text{span }\\left(')).toBe(true);
+    // The space after x is visible now ("x\ "), then the word, then maths again.
+    expect(v.startsWith('x\\ \\text{span }\\left(')).toBe(true);
     expect(v).toContain('\\begin{pmatrix}');
     expect(v).not.toContain('\\textbackslash');
   });
@@ -558,7 +559,35 @@ test.describe('Document view', () => {
       const t = el.shadowRoot?.querySelector('.ML__text') as HTMLElement | null;
       return t ? getComputedStyle(t).fontFamily : '';
     });
-    expect(font).toContain('Georgia');
+    // Same LaTeX face as the text on the page.
+    expect(font).toContain('KaTeX_Main');
+    const pageFont = await page.locator('.doc-content p').first().evaluate((p) => getComputedStyle(p).fontFamily);
+    expect(pageFont).toContain('KaTeX_Main');
+    // The space bar makes a visible space inside a formula.
+    await mf.click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('Space');
+    await page.keyboard.type('a');
+    expect((await fields(page))[0]).toMatch(/\\ a$/);
+  });
+
+  test('DOC-28 spaces in formulas without double gaps; one Esc leaves a matrix', async ({ page }) => {
+    await openDoc(page);
+    await startFormula(page);
+    await page.keyboard.type('a = 0 ,  b = 1');
+    await page.keyboard.press('Escape');
+    expect((await fields(page))[0]).toBe('a=0,\\ b=1');
+    await page.keyboard.type(' ');
+    await tab(page, 'Insert').click();
+    await page.getByRole('group', { name: 'Matrix' }).getByRole('button', { name: 'Matrix' }).click();
+    await page.getByRole('button', { name: '2 × 2' }).click();
+    await page.keyboard.type('1 2');
+    await page.keyboard.press('Escape');
+    // Out of the matrix with the first Esc: what you type next is text.
+    await expect(page.locator('.doc-math math-field').last()).not.toBeFocused();
+    await page.keyboard.type(' Ende');
+    await expect(body(page)).toContainText('Ende');
+    expect((await fields(page))[1]).toContain('1\\ 2');
   });
 
   test('DOC-15 tables: insert, add a row, delete', async ({ page }) => {

@@ -60,10 +60,25 @@ declare module '@tiptap/core' {
   }
 }
 
-function focusFieldAt(editor: Editor, pos: number, atStart = false, tries = 6, delay = 0) {
+function focusFieldAt(editor: Editor, pos: number, atStart = false, tries = 6, delay = 0, cancel?: { done: boolean }) {
   // Focus right away so the next key lands in the formula; check again a few
   // times in case the editor's own focus handling (a frame later) took it back.
+  // As soon as you press a key or click yourself, the retries stop (otherwise
+  // a quick Esc right after "1/" was undone by a late retry).
+  if (!cancel) {
+    const flag = { done: false };
+    const stop = () => {
+      flag.done = true;
+      editor.view.dom.removeEventListener('keydown', stop, true);
+      editor.view.dom.removeEventListener('pointerdown', stop, true);
+    };
+    editor.view.dom.addEventListener('keydown', stop, true);
+    editor.view.dom.addEventListener('pointerdown', stop, true);
+    setTimeout(stop, 400); // never longer than all the retries take
+    cancel = flag;
+  }
   const attempt = () => {
+    if (cancel.done) return;
     const dom = editor.view.nodeDOM(pos);
     // Not an element (e.g. a text node in a table cell while the edit is still
     // being applied): nothing to focus yet, try again shortly.
@@ -75,7 +90,9 @@ function focusFieldAt(editor: Editor, pos: number, atStart = false, tries = 6, d
       else if (mf.value.includes('placeholder')) mf.executeCommand('moveToNextPlaceholder');
       else mf.position = mf.lastOffset;
     }
-    if (tries > 1) focusFieldAt(editor, pos, atStart, tries - 1, 40);
+    // Try again only while the formula hasn't got the focus. Once it has, stop:
+    // retrying later pulled you back in after Esc, or after clicking away.
+    if (document.activeElement !== mf && tries > 1) focusFieldAt(editor, pos, atStart, tries - 1, 40, cancel);
   };
   if (delay) setTimeout(attempt, delay);
   // Right after the current edit is applied (a command runs before its change
@@ -199,12 +216,20 @@ function makeNode(name: 'mathInline' | 'mathBlock', display: boolean) {
           e.preventDefault();
           leave((e as CustomEvent<{ direction: string }>).detail.direction !== 'backward');
         });
-        mf.addEventListener('keydown', (e) => {
-          if (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey)) {
-            e.preventDefault();
-            leave(true);
-          }
-        });
+        // Before MathLive sees the key (capture): with empty boxes left in a matrix
+        // it swallowed the first Esc, so you kept typing inside the matrix.
+        // The suggestion list (registered earlier) still gets Esc/Enter first.
+        mf.addEventListener(
+          'keydown',
+          (e) => {
+            if (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey)) {
+              e.preventDefault();
+              e.stopImmediatePropagation();
+              leave(true);
+            }
+          },
+          { capture: true },
+        );
         // Backspace at the very start of a formula (Delete at its end): an empty
         // formula goes away; otherwise you are back in the text and the letter
         // before (after) the formula is deleted, as you'd expect.

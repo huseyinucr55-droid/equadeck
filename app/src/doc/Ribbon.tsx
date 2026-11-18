@@ -19,6 +19,7 @@ export const TEXT_COLOURS = ['#000000', '#c92a2a', '#1864ab', '#2b8a3e', '#e8590
 export const HIGHLIGHTS = ['#fff3bf', '#d3f9d8', '#d0ebff', '#ffdeeb', '#e9ecef'];
 const SIZES = [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 72];
 const FONTS: [string, string][] = [
+  ['LaTeX', 'KaTeX_Main, "Latin Modern Roman", Georgia, serif'],
   ['Serif', 'Georgia, "Times New Roman", serif'],
   ['Sans', 'Arial, Helvetica, sans-serif'],
   ['Mono', '"Courier New", monospace'],
