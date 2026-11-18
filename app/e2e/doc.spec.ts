@@ -407,6 +407,20 @@ test.describe('Document view', () => {
     await expect(p).not.toContainText('Anfang');
   });
 
+  test('DOC-23 after a word in a formula, brackets and a matrix still go in as maths', async ({ page }) => {
+    await openDoc(page);
+    await startFormula(page);
+    await page.keyboard.type('x span ');
+    await page.keyboard.type('(');
+    await tab(page, 'Insert').click();
+    await page.getByRole('group', { name: 'Matrix' }).getByRole('button', { name: 'Matrix' }).click();
+    await page.getByRole('button', { name: '3 × 1' }).click();
+    const v = (await fields(page))[0];
+    expect(v.startsWith('x\\text{span }\\left(')).toBe(true);
+    expect(v).toContain('\\begin{pmatrix}');
+    expect(v).not.toContain('\\textbackslash');
+  });
+
   test('DOC-15 tables: insert, add a row, delete', async ({ page }) => {
     await openDoc(page);
     await body(page).click();
@@ -414,7 +428,7 @@ test.describe('Document view', () => {
     await page.getByRole('button', { name: 'Table', exact: true }).click();
     await expect(body(page).locator('table tr')).toHaveCount(3);
     await page.keyboard.insertText('x');
-    await page.getByRole('button', { name: 'Row below' }).click();
+    await page.getByRole('group', { name: 'Table' }).getByRole('button', { name: 'Row below' }).click();
     await expect(body(page).locator('table tr')).toHaveCount(4);
     await page.getByRole('button', { name: 'Delete table' }).click();
     await expect(body(page).locator('table')).toHaveCount(0);

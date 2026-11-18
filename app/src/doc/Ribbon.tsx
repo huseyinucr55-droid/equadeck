@@ -233,7 +233,9 @@ export function Ribbon(p: RibbonProps) {
     fieldAtPress.current = null;
     if (mf && latex) {
       mf.focus();
-      mf.insert(latex, { selectionMode: 'placeholder', focus: true });
+      // Always as maths: after a word the formula may still be in text mode,
+      // which would put the LaTeX in as plain text.
+      mf.insert(latex, { mode: 'math', format: 'latex', selectionMode: 'placeholder', focus: true });
       return;
     }
     editor.chain().focus().insertMath(latex, block).run();

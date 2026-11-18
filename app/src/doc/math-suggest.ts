@@ -18,10 +18,16 @@ export function attachSuggestions(mf: MathfieldElement) {
   let index = 0;
   let matched = 0; // how many letters before the caret the suggestions replace
 
+  // Maths ignores spaces, so "x span" would read as one word "xspan". A space
+  // typed after a short variable is remembered here as a word boundary.
+  let boundary = -1;
+
   /** Letters right before the caret, as typed (not part of a \command or text). */
   const currentWord = (): string => {
     if (mf.mode !== 'math') return '';
-    const before = mf.getValue(0, mf.position, 'latex');
+    const pos = mf.position;
+    const start = boundary >= 0 && boundary <= pos ? boundary : 0;
+    const before = mf.getValue(start, pos, 'latex');
     return WORD_BEFORE_CARET.exec(before)?.[1] ?? '';
   };
 
@@ -66,7 +72,7 @@ export function attachSuggestions(mf: MathfieldElement) {
   const replaceBeforeCaret = (count: number, latex: string, selectionMode: 'placeholder' | 'after') => {
     const end = mf.position;
     mf.selection = { ranges: [[end - count, end]] };
-    mf.insert(latex, { insertionMode: 'replaceSelection', selectionMode, focus: true });
+    mf.insert(latex, { insertionMode: 'replaceSelection', selectionMode, mode: 'math', format: 'latex', focus: true });
   };
 
   /** Put the chosen symbol in place of the word (its boxes to fill in come next). */
@@ -80,7 +86,8 @@ export function attachSuggestions(mf: MathfieldElement) {
   /** "für" + space: the word is text, not the variables f·ü·r. Then back to maths. */
   function wordToText(word: string) {
     replaceBeforeCaret(word.length, `\\text{${word} }`, 'after');
-    if (mf.mode !== 'math') mf.executeCommand(['switchMode', 'math']);
+    // Back to maths, so "(", "x", a matrix … after the word are maths again.
+    mf.mode = 'math';
     close();
   }
 
@@ -115,6 +122,8 @@ export function attachSuggestions(mf: MathfieldElement) {
         if (word.length >= 3) {
           stop();
           wordToText(word);
+        } else if (mf.mode === 'math') {
+          boundary = mf.position; // "x " — the next letters start a new word
         }
       }
     },
@@ -129,6 +138,11 @@ export function attachSuggestions(mf: MathfieldElement) {
   });
   mf.addEventListener('selection-change', () => {
     if (!typing) close();
+  });
+  // Moving the caret yourself (click, arrows) forgets the remembered space.
+  mf.addEventListener('pointerdown', () => (boundary = -1));
+  mf.addEventListener('keydown', (e) => {
+    if (/^(Arrow|Home|End|Page)/.test(e.key)) boundary = -1;
   });
   mf.addEventListener('blur', close);
 }
