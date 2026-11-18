@@ -13,6 +13,8 @@ export type Doc = {
   paper: Paper;
   margins: Margins;
   orientation: Orientation;
+  /** Formulas on their own line are numbered (1), (2) … */
+  numbered?: boolean;
 };
 
 const KEY = 'lx.docs.v1';

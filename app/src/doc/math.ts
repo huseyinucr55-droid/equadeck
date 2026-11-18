@@ -141,6 +141,20 @@ function makeNode(name: 'mathInline' | 'mathBlock', display: boolean) {
         let current = node;
         const pos = () => (typeof getPos === 'function' ? getPos() : undefined);
 
+        // An empty formula left by clicking elsewhere (or opening a dialog) goes
+        // away too, a moment later, unless you came back to it (a ribbon button
+        // briefly takes the focus and then fills the formula).
+        mf.addEventListener('blur', () => {
+          setTimeout(() => {
+            if (document.activeElement === mf || mf.getValue('latex').trim()) return;
+            const at = pos();
+            if (at === undefined || editor.isDestroyed) return;
+            const here = editor.state.doc.nodeAt(at);
+            if (here?.type.name !== current.type.name) return;
+            editor.view.dispatch(editor.state.tr.delete(at, at + here.nodeSize).setMeta('addToHistory', false));
+          }, 400);
+        });
+
         // Typing in the formula updates the stored LaTeX (one undo step per change).
         mf.addEventListener('input', () => {
           const at = pos();

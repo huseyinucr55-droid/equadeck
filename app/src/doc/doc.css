@@ -41,6 +41,20 @@
   text-decoration: none;
 }
 .doc-link:hover { background: var(--lx-color-surface); }
+button.doc-link { border: 0; background: none; font: inherit; cursor: pointer; }
+/* Keyboard shortcuts dialog. */
+.doc-help { display: grid; gap: 0.35rem; margin: 0; }
+.doc-help-row { display: grid; grid-template-columns: minmax(9rem, 40%) 1fr; gap: 0.75rem; align-items: baseline; }
+.doc-help dt, .doc-help dd { margin: 0; font-size: 0.9rem; }
+.doc-help kbd {
+  display: inline-block;
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--lx-color-border-input);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font: 0.8rem/1.4 var(--lx-font-mono, monospace);
+  white-space: nowrap;
+}
 
 /* --- Ribbon -------------------------------------------------------------- */
 .ribbon { position: relative; border-bottom: 1px solid var(--lx-color-border); background: var(--lx-color-bg); }
@@ -57,6 +71,25 @@
   white-space: nowrap;
 }
 .ribbon-tab[aria-selected='true'] { border-bottom-color: var(--lx-color-accent); font-weight: 600; }
+.ribbon-tabs-row { display: flex; align-items: center; padding-right: 0.75rem; }
+.ribbon-tabs-row > .ribbon-tabs { flex: 1; min-width: 0; }
+.ribbon-collapse {
+  margin-left: auto;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--lx-color-text-muted);
+  cursor: pointer;
+}
+.ribbon-collapse:hover { background: var(--lx-color-surface); color: var(--lx-color-text); }
+.ribbon-collapse:focus-visible { outline: 2px solid var(--lx-color-focus); }
+.ribbon-panel[hidden] { display: none; }
 .ribbon-tab:focus-visible { outline: 2px solid var(--lx-color-focus); outline-offset: -2px; }
 .ribbon-panel {
   display: flex;
@@ -350,7 +383,19 @@
   --selection-color: inherit;
   --caret-color: transparent;
 }
-.doc-math-block { display: flex; justify-content: center; margin: 0.6em 0; }
+.doc-math-block { display: flex; justify-content: center; margin: 0.6em 0; position: relative; }
+/* Formula numbers (1), (2) … at the right margin (Layout → Number formulas). */
+.doc-sheet[data-numbered='true'] .doc-content { counter-reset: formula; }
+.doc-sheet[data-numbered='true'] .doc-math-block { counter-increment: formula; }
+.doc-sheet[data-numbered='true'] .doc-math-block::after {
+  content: '(' counter(formula) ')';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12pt;
+  color: #15181d;
+}
 .doc-math-block math-field { font-size: 1.25em; }
 .doc-math.is-selected math-field { outline: 2px solid var(--lx-color-focus); }
 @media print {

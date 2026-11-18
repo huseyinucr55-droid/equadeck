@@ -3,13 +3,16 @@
 // alignment); formulas become OMML, so they stay editable in Word.
 import {
   AlignmentType, BorderStyle, Document, HeadingLevel, ImportedXmlComponent, LevelFormat, PageBreak, PageOrientation, Packer, Paragraph,
-  ShadingType, Table, TableCell, TableRow, TextRun, convertMillimetersToTwip, type ParagraphChild,
+  ShadingType, Table, TableCell, TableRow, TabStopType, TextRun, convertMillimetersToTwip, type ParagraphChild,
 } from 'docx';
 import type { JSONContent } from '@tiptap/react';
 import { latexToOmml } from './omml';
 import { MARGIN_MM, type Doc } from './store';
 
 type Mark = { type: string; attrs?: Record<string, unknown> };
+
+/** While exporting a document with numbered formulas: the count so far and the text width (twips). */
+let numbering: { count: number; width: number } | null = null;
 
 const ALIGN: Record<string, (typeof AlignmentType)[keyof typeof AlignmentType]> = {
   left: AlignmentType.LEFT,
@@ -86,9 +89,23 @@ function blocks(content: JSONContent[] = [], list?: { ref: string; level: number
         }
         break;
       }
-      case 'mathBlock':
-        out.push(new Paragraph({ children: [math(String(n.attrs?.latex ?? ''), true)], alignment: AlignmentType.CENTER }));
+      case 'mathBlock': {
+        const formula = math(String(n.attrs?.latex ?? ''), !numbering);
+        if (numbering) {
+          // Formula in the middle, its number at the right margin, like on screen.
+          numbering.count += 1;
+          out.push(
+            new Paragraph({
+              tabStops: [
+                { type: TabStopType.CENTER, position: Math.round(numbering.width / 2) },
+                { type: TabStopType.RIGHT, position: numbering.width },
+              ],
+              children: [new TextRun('\t'), formula, new TextRun(`\t(${numbering.count})`)],
+            }),
+          );
+        } else out.push(new Paragraph({ children: [formula], alignment: AlignmentType.CENTER }));
         break;
+      }
       case 'horizontalRule':
         out.push(new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'A0A7B1', space: 1 } } }));
         break;
@@ -169,7 +186,16 @@ export async function toDocx(content: JSONContent, doc: Doc): Promise<Blob> {
             margin: { top: margin, bottom: margin, left: margin, right: margin },
           },
         },
-        children: blocks(content.content),
+        children: (() => {
+          // Numbered formulas need the width of the text area for the tab stops.
+          const pageWidth = convertMillimetersToTwip(landscape ? 297 : 210);
+          numbering = doc.numbered ? { count: 0, width: pageWidth - 2 * margin } : null;
+          try {
+            return blocks(content.content);
+          } finally {
+            numbering = null;
+          }
+        })(),
       },
     ],
   });

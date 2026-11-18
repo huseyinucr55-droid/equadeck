@@ -459,6 +459,84 @@ test.describe('Document view', () => {
     await expect(page.locator('td math-field, th math-field').first()).toBeFocused();
   });
 
+  test('DOC-25 maths typed in the text becomes formulas; words stay text', async ({ page }) => {
+    await openDoc(page);
+    await body(page).click();
+    await page.keyboard.type('Es gilt x^');
+    await expect(page.locator('.doc-math-inline math-field').last()).toBeFocused();
+    await page.waitForTimeout(150);
+    await page.keyboard.type('2');
+    await page.keyboard.press('Escape');
+    await page.keyboard.type(' und 1/');
+    await expect(page.locator('.doc-math-inline math-field').last()).toBeFocused();
+    await page.waitForTimeout(150);
+    await page.keyboard.type('2');
+    await page.keyboard.press('Escape');
+    await page.keyboard.type(' a_');
+    await page.waitForTimeout(150);
+    await page.keyboard.type('n');
+    await page.keyboard.press('Escape');
+    await page.keyboard.type(' also A => B und x != y, km/h und/oder');
+    const v = await fields(page);
+    expect(v.slice(0, 3)).toEqual(['x^2', '\\frac12', 'a_{n}']);
+    expect(v).toContain('\\Rightarrow');
+    expect(v).toContain('\\neq');
+    await expect(body(page)).toContainText('km/h und/oder');
+    // Ctrl+Z takes back the last sign only; the switch in View turns it off.
+    await tab(page, 'View').click();
+    await page.getByRole('button', { name: 'Recognise maths' }).click();
+    await body(page).click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' y^3');
+    await expect(body(page)).toContainText('y^3');
+  });
+
+  test('DOC-26 ribbon can be hidden; F1 shows the shortcuts; formulas can be numbered', async ({ page }) => {
+    await openDoc(page);
+    // Hide and show the ribbon; the choice is remembered.
+    await page.getByRole('button', { name: /Hide the ribbon/ }).click();
+    await expect(page.locator('.ribbon-panel')).toBeHidden();
+    await page.reload();
+    await expect(page.locator('.ribbon-panel')).toBeHidden();
+    await tab(page, 'Insert').click(); // a tab brings it back
+    await expect(page.locator('.ribbon-panel')).toBeVisible();
+    // F1 opens the keyboard shortcuts.
+    await page.keyboard.press('F1');
+    await expect(page.getByRole('dialog', { name: 'Keyboard shortcuts' })).toBeVisible();
+    await axe(page);
+    await page.keyboard.press('Escape');
+    // Numbered formulas: (1) and (2) at the right.
+    await page.evaluate(() => {
+      const content = { type: 'doc', content: [{ type: 'mathBlock', attrs: { latex: 'a^2' } }, { type: 'mathBlock', attrs: { latex: 'b^2' } }] };
+      localStorage.setItem('lx.docs.v1', JSON.stringify([{ id: 'n', title: 'N', updatedAt: 1, content, paper: 'blank', margins: 'normal', orientation: 'portrait' }]));
+      localStorage.setItem('lx.docs.current', 'n');
+    });
+    await page.reload();
+    await tab(page, 'Layout').click();
+    await page.getByRole('button', { name: 'Number formulas' }).click();
+    const nums = await page.locator('.doc-math-block').evaluateAll((els) => els.map((e) => getComputedStyle(e, '::after').content));
+    expect(nums).toEqual(['"(" counter(formula) ")"', '"(" counter(formula) ")"'].map(() => expect.stringMatching(/\(|counter/)));
+    // Word export carries the numbers.
+    await tab(page, 'File').click();
+    const dl = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Download for Word' }).click();
+    const file = await dl;
+    const { readFileSync } = await import('node:fs');
+    const { inflateRawSync } = await import('node:zlib');
+    const zip = readFileSync((await file.path())!);
+    // Find word/document.xml in the zip and check for "(2)".
+    const name = Buffer.from('word/document.xml');
+    const at = zip.indexOf(name);
+    expect(at).toBeGreaterThan(0);
+    const header = at - 30;
+    const method = zip.readUInt16LE(header + 8);
+    const size = zip.readUInt32LE(header + 18);
+    const extra = zip.readUInt16LE(header + 28);
+    const data = zip.subarray(at + name.length + extra, at + name.length + extra + size);
+    const xml = method === 8 ? inflateRawSync(data).toString('utf8') : data.toString('utf8');
+    expect(xml).toContain('(2)');
+  });
+
   test('DOC-15 tables: insert, add a row, delete', async ({ page }) => {
     await openDoc(page);
     await body(page).click();

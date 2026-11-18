@@ -1,16 +1,17 @@
 // The document view (/doc): a white A4 sheet you type on directly, with a
 // ribbon above and a status bar below, like a word processor.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
-import { Calculator, Check, Sparkles } from 'lucide-react';
+import { EditorContent, useEditor, useEditorState, type JSONContent } from '@tiptap/react';
+import { Calculator, Check, Keyboard, Sparkles } from 'lucide-react';
 import { APP_NAME } from '../brand';
-import { LangSwitch } from '../components/ui';
+import { Dialog, LangSwitch } from '../components/ui';
 import { useLang, useT } from '../lib/i18n';
 import { to } from '../lib/paths';
 import { extensions } from './extensions';
 import { setMathLanguage } from './math';
 import { template } from './templates';
 import { setTextSuggestions, textSuggestionsOn } from './text-suggest';
+import { autoMathOn, setAutoMath } from './auto-math';
 import { layout, onPageCount, repaginate } from './pagination';
 import { Ribbon } from './Ribbon';
 import { StatusBar } from './StatusBar';
@@ -57,6 +58,19 @@ export default function DocApp() {
   const titleRef = useRef<HTMLInputElement>(null);
   const restoreInput = useRef<HTMLInputElement>(null);
   const [textSuggest, setTextSuggest] = useState(textSuggestionsOn);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [autoMath, setAutoMathState] = useState(autoMathOn);
+  // F1 opens the keyboard shortcuts.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'F1') {
+        e.preventDefault();
+        setHelpOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   const canvasRef = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
   const saveTimer = useRef<number | undefined>(undefined);
@@ -85,7 +99,7 @@ export default function DocApp() {
       window.clearTimeout(saveTimer.current);
       const id = docRef.current.id;
       saveTimer.current = window.setTimeout(() => {
-        patchDoc(id, { content: e.getJSON() });
+        patchDoc(id, { content: withoutEmptyFormulas(e.getJSON()) });
         setSaved(true);
       }, 500);
     },
@@ -119,7 +133,7 @@ export default function DocApp() {
 
   const flush = () => {
     window.clearTimeout(saveTimer.current);
-    if (editor) patchDoc(docRef.current.id, { content: editor.getJSON() });
+    if (editor) patchDoc(docRef.current.id, { content: withoutEmptyFormulas(editor.getJSON()) });
     setSaved(true);
   };
 
@@ -237,6 +251,9 @@ export default function DocApp() {
           {notice || (saved ? <><Check aria-hidden className="size-3.5" /> {t('Saved in this browser')}</> : t('Saving…'))}
         </span>
         <nav aria-label={t('Main')} className="ml-auto flex items-center gap-2">
+          <button type="button" className="doc-link" aria-label={t('Keyboard shortcuts (F1)')} title={t('Keyboard shortcuts (F1)')} onClick={() => setHelpOpen(true)}>
+            <Keyboard aria-hidden className="size-4" />
+          </button>
           <a href={to('/')} className="doc-link">
             <Calculator aria-hidden className="size-4" />
             <span className="max-sm:hidden">{t('Single formula')}</span>
@@ -304,6 +321,11 @@ export default function DocApp() {
             onZoom={setZoom}
             onFitWidth={fitWidth}
             onToggleDark={toggleDark}
+            autoMath={autoMath}
+            onToggleAutoMath={() => {
+              setAutoMath(!autoMath);
+              setAutoMathState(!autoMath);
+            }}
             textSuggest={textSuggest}
             onToggleTextSuggest={() => {
               setTextSuggestions(!textSuggest);
@@ -340,7 +362,7 @@ export default function DocApp() {
       />
 
       <main className="doc-canvas" ref={canvasRef} aria-label={t('Page')}>
-        <div className="doc-sheet" data-paper={doc.paper} ref={sheetRef} style={sheetStyle}>
+        <div className="doc-sheet" data-paper={doc.paper} data-numbered={doc.numbered ? 'true' : undefined} ref={sheetRef} style={sheetStyle}>
           {/* The white pages behind the text, each with its paper pattern inside the margins. */}
           <div className="doc-pages" aria-hidden>
             {Array.from({ length: pages }, (_, i) => (
@@ -358,8 +380,46 @@ export default function DocApp() {
       <div className="doc-chrome">
         <StatusBar inFormula={inFormula} page={page} pages={pages} words={stats?.words ?? 0} zoom={zoom} onZoom={setZoom} min={ZOOM_MIN} max={ZOOM_MAX} />
       </div>
+
+      <Dialog open={helpOpen} onClose={() => setHelpOpen(false)} title={t('Keyboard shortcuts')}>
+        <dl className="doc-help">
+          {HELP.map(([keys, what]) => (
+            <div key={keys} className="doc-help-row">
+              <dt><kbd>{t(keys)}</kbd></dt>
+              <dd>{t(what)}</dd>
+            </div>
+          ))}
+        </dl>
+      </Dialog>
     </div>
   );
+}
+
+/** The keys worth knowing, shown by the "?" button and F1. */
+const HELP: [string, string][] = [
+  ['Type a word', 'opens the list of symbols (summe, äquivalent, bruch …)'],
+  ['Enter / Tab', 'takes the chosen symbol'],
+  ['↑ ↓', 'picks another suggestion'],
+  ['x^2, a_n, 1/2', 'typed in the text become a formula by themselves'],
+  ['Alt+= or Ctrl+M', 'starts an empty formula'],
+  ['/  ^  _', 'in a formula: fraction, power, index'],
+  ['Tab', 'in a formula: next box'],
+  ['Esc', 'closes the list, or leaves the formula'],
+  ['Backspace', 'removes a formula next to the cursor at once'],
+  ['Ctrl+B / I / U', 'bold, italic, underline'],
+  ['Ctrl+Z / Ctrl+Y', 'undo, redo'],
+  ['Ctrl+P', 'print or save as PDF'],
+];
+
+/** An empty formula you never filled in isn't saved (it would come back after a reload). */
+function withoutEmptyFormulas(node: JSONContent): JSONContent {
+  if (!node.content) return node;
+  return {
+    ...node,
+    content: node.content
+      .filter((n) => !((n.type === 'mathInline' || n.type === 'mathBlock') && !String(n.attrs?.latex ?? '').trim()))
+      .map(withoutEmptyFormulas),
+  };
 }
 
 const fileName = (title: string) => (title || 'document').replace(/[\\/:*?"<>|]+/g, '_');

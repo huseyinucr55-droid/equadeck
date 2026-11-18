@@ -10,6 +10,7 @@ import { Pagination } from './pagination';
 import { getLang, tr } from '../lib/i18n';
 import { TableKit } from '@tiptap/extension-table';
 import { TextSuggestions } from './text-suggest';
+import { AutoMath } from './auto-math';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -52,5 +53,6 @@ export function extensions(placeholder: string) {
     Pagination,
     TableKit.configure({ table: { resizable: false } }),
     TextSuggestions,
+    AutoMath,
   ];
 }

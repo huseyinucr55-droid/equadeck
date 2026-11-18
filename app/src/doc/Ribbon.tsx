@@ -5,7 +5,7 @@ import { useRef, useState, type ReactNode } from 'react';
 import type { MathfieldElement } from 'mathlive';
 import { useEditorState, type Editor } from '@tiptap/react';
 import {
-  AlignCenter, AlignJustify, AlignLeft, AlignRight, Archive, ArchiveRestore, Baseline, BetweenHorizontalEnd, BetweenVerticalEnd, Columns2, LayoutTemplate, Rows2, Table, Bold, Copy, Eraser, FileCode, FileDown, FilePlus, FileText,
+  AlignCenter, AlignJustify, AlignLeft, AlignRight, Archive, ArchiveRestore, Baseline, BetweenHorizontalEnd, BetweenVerticalEnd, ChevronDown, ChevronUp, Columns2, LayoutTemplate, Rows2, Superscript, Table, Bold, Copy, Eraser, FileCode, FileDown, FilePlus, FileText,
   FolderOpen, Grid3x3, Highlighter, Italic, List, ListOrdered, Maximize2, Minus, Moon, Pencil, Printer, RectangleHorizontal,
   RectangleVertical, Redo2, Rows3, SeparatorHorizontal, Sigma, Square, Strikethrough, Sun, Trash2,
   Underline, Undo2, ZoomIn, ZoomOut,
@@ -92,12 +92,14 @@ export type RibbonProps = {
   onTemplate: (kind: TemplateKind) => void;
   onRestore: () => void;
   onDocx: () => void;
-  onLayout: (patch: Partial<Pick<Doc, 'paper' | 'margins' | 'orientation'>>) => void;
+  onLayout: (patch: Partial<Pick<Doc, 'paper' | 'margins' | 'orientation' | 'numbered'>>) => void;
   onZoom: (zoom: number) => void;
   onFitWidth: () => void;
   onToggleDark: () => void;
   textSuggest: boolean;
   onToggleTextSuggest: () => void;
+  autoMath: boolean;
+  onToggleAutoMath: () => void;
 };
 
 const keep = (e: React.MouseEvent) => e.preventDefault();
@@ -219,6 +221,22 @@ export function Ribbon(p: RibbonProps) {
   // can move focus away before the click arrives).
   const fieldAtPress = useRef<MathfieldElement | null>(null);
   const [matrixOpen, setMatrixOpen] = useState(false);
+  // Hide the ribbon for more room on the page (remembered in this browser).
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('lx.doc.ribbon') === 'collapsed';
+    } catch {
+      return false;
+    }
+  });
+  const toggleCollapsed = (next: boolean) => {
+    setCollapsed(next);
+    try {
+      localStorage.setItem('lx.doc.ribbon', next ? 'collapsed' : 'open');
+    } catch {
+      /* ignore */
+    }
+  };
   /** Rows and columns of the matrix or cases you are typing in. */
   const cell = (command: 'addRowAfter' | 'addColumnAfter' | 'removeRow' | 'removeColumn') => {
     const mf = fieldAtPress.current?.isConnected ? fieldAtPress.current : activeMathField();
@@ -251,6 +269,7 @@ export function Ribbon(p: RibbonProps) {
 
   return (
     <section className="ribbon" aria-label={t('Ribbon')} onPointerDownCapture={() => (fieldAtPress.current = activeMathField())}>
+      <div className="ribbon-tabs-row">
       <div role="tablist" aria-label={t('Ribbon')} className="ribbon-tabs">
         {tabs.map(([id, label]) => (
           <button
@@ -264,7 +283,10 @@ export function Ribbon(p: RibbonProps) {
             className="ribbon-tab"
             // Switching tabs keeps the cursor where you were typing (text or formula).
             onMouseDown={keep}
-            onClick={() => setTab(id)}
+            onClick={() => {
+              setTab(id);
+              if (collapsed) toggleCollapsed(false); // a tab brings the ribbon back
+            }}
             onKeyDown={(e) => {
               const i = tabs.findIndex(([k]) => k === id);
               const next = e.key === 'ArrowRight' ? (i + 1) % tabs.length : e.key === 'ArrowLeft' ? (i - 1 + tabs.length) % tabs.length : -1;
@@ -278,8 +300,22 @@ export function Ribbon(p: RibbonProps) {
           </button>
         ))}
       </div>
+        {/* Outside the tablist: a tablist may only hold tabs. */}
+        <button
+          type="button"
+          className="ribbon-collapse"
+          aria-expanded={!collapsed}
+          aria-controls={`panel-${tab}`}
+          title={collapsed ? t('Show the ribbon') : t('Hide the ribbon (more room for the page)')}
+          aria-label={collapsed ? t('Show the ribbon') : t('Hide the ribbon (more room for the page)')}
+          onMouseDown={keep}
+          onClick={() => toggleCollapsed(!collapsed)}
+        >
+          {collapsed ? <ChevronDown aria-hidden className="size-4" /> : <ChevronUp aria-hidden className="size-4" />}
+        </button>
+      </div>
 
-      <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="ribbon-panel">
+      <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="ribbon-panel" hidden={collapsed}>
         {tab === 'file' && (
           <>
             <Group label={t('Document')}>
@@ -446,6 +482,16 @@ export function Ribbon(p: RibbonProps) {
                 <Btn key={id} wide label={label} icon={<span aria-hidden className="ribbon-margin-icon" data-m={id} />} pressed={p.doc.margins === id} onClick={() => p.onLayout({ margins: id })} />
               ))}
             </Group>
+            <Group label={t('Formula')}>
+              <Btn
+                wide
+                label={t('Number formulas')}
+                icon={<ListOrdered aria-hidden className="size-4" />}
+                title={t('Formulas on their own line get (1), (2) …')}
+                pressed={!!p.doc.numbered}
+                onClick={() => p.onLayout({ numbered: !p.doc.numbered })}
+              />
+            </Group>
             <Group label={t('Orientation')}>
               {([
                 ['portrait', t('Portrait'), <RectangleVertical key="p" aria-hidden className="size-4" />],
@@ -474,6 +520,14 @@ export function Ribbon(p: RibbonProps) {
                 title={t('Typing a word like "summe" or "äquivalent" offers the symbol')}
                 pressed={p.textSuggest}
                 onClick={p.onToggleTextSuggest}
+              />
+              <Btn
+                wide
+                label={t('Recognise maths')}
+                icon={<Superscript aria-hidden className="size-4" />}
+                title={t('x^2, a_n, 1/2 and => typed in the text become formulas')}
+                pressed={p.autoMath}
+                onClick={p.onToggleAutoMath}
               />
             </Group>
             <Group label={t('Appearance')}>

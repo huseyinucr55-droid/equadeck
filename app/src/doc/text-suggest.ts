@@ -90,6 +90,8 @@ export const TextSuggestions = Extension.create({
         .setTextSelection({ from, to })
         .insertMath(choice.latex, false, !choice.latex.includes('#?'))
         .run();
+      // What you type next is a new undo step too (not merged with the symbol).
+      editor.view.dispatch(closeHistory(editor.state.tr));
     };
 
     const update = (view: EditorView) => {
