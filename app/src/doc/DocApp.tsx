@@ -8,7 +8,7 @@ import { Dialog, LangSwitch } from '../components/ui';
 import { useLang, useT } from '../lib/i18n';
 import { to } from '../lib/paths';
 import { extensions } from './extensions';
-import { setMathLanguage } from './math';
+import { isBlank, setMathLanguage } from './math';
 import { template } from './templates';
 import { setTextSuggestions, textSuggestionsOn } from './text-suggest';
 import { autoMathOn, setAutoMath } from './auto-math';
@@ -417,7 +417,7 @@ function withoutEmptyFormulas(node: JSONContent): JSONContent {
   return {
     ...node,
     content: node.content
-      .filter((n) => !((n.type === 'mathInline' || n.type === 'mathBlock') && !String(n.attrs?.latex ?? '').trim()))
+      .filter((n) => !((n.type === 'mathInline' || n.type === 'mathBlock') && isBlank(String(n.attrs?.latex ?? ''))))
       .map(withoutEmptyFormulas),
   };
 }

@@ -7,7 +7,7 @@ import { Node, mergeAttributes, type Editor } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
 import { MathfieldElement } from 'mathlive';
 import 'mathlive/fonts.css';
-import { attachSuggestions } from './math-suggest';
+import { attachSuggestions, typeInto } from './math-suggest';
 
 // Fonts come bundled through fonts.css (no CDN); no keyboard click sounds.
 MathfieldElement.fontsDirectory = null;
@@ -100,6 +100,18 @@ function focusFieldAt(editor: Editor, pos: number, atStart = false, tries = 6, d
   else queueMicrotask(attempt);
 }
 
+// After Enter in a formula: the keys typed before the new formula line is
+// ready (one at a time, so one for the whole page).
+let handoff: { keys: string[] } | null = null;
+// Keys after a replayed Enter, for the line that Enter makes (if it makes one).
+let carry: string[] | null = null;
+
+/** Nothing but spaces (or nothing at all): `\ `, `\,`, `~` … */
+export function isBlank(latex: string): boolean {
+  // `\ ` trimmed at the end leaves a lone `\`.
+  return !latex.replace(/\\(?:[ ,;:!>]|$)|\\q?quad\b|~|\s/g, '');
+}
+
 function makeNode(name: 'mathInline' | 'mathBlock', display: boolean) {
   return Node.create({
     name,
@@ -157,6 +169,36 @@ function makeNode(name: 'mathInline' | 'mathBlock', display: boolean) {
           { once: true },
         );
         dom.append(mf);
+        // Keys typed right after Enter, before the new line is ready: kept for
+        // the new line instead of landing in this one. First of all key
+        // handlers, so the suggestions and the space bar don't act on them here.
+        mf.addEventListener(
+          'keydown',
+          (e) => {
+            if (!handoff || e.isComposing) return;
+            // AltGr (@ { } [ ] \ | on a German keyboard) counts as plain typing.
+            const plain = !e.metaKey && (e.getModifierState('AltGraph') || (!e.ctrlKey && !e.altKey));
+            if (plain && e.key.length === 1) handoff.keys.push(e.key);
+            else if (plain && e.key === 'Enter' && !e.shiftKey) handoff.keys.push('\n');
+            else if (e.key === 'Backspace') handoff.keys.pop();
+            else return;
+            e.preventDefault();
+            e.stopImmediatePropagation();
+          },
+          { capture: true },
+        );
+        // The same for text that comes without key presses (iPad keyboard).
+        mf.addEventListener(
+          'beforeinput',
+          (e) => {
+            const data = (e as InputEvent).data;
+            if (!handoff || !e.isTrusted || (e as InputEvent).inputType !== 'insertText' || !data) return;
+            handoff.keys.push(...data.replace(/ /g, ' '));
+            e.preventDefault();
+            e.stopImmediatePropagation();
+          },
+          { capture: true },
+        );
         attachSuggestions(mf);
 
         let current = node;
@@ -167,7 +209,7 @@ function makeNode(name: 'mathInline' | 'mathBlock', display: boolean) {
         // briefly takes the focus and then fills the formula).
         mf.addEventListener('blur', () => {
           setTimeout(() => {
-            if (document.activeElement === mf || mf.getValue('latex').trim()) return;
+            if (document.activeElement === mf || !isBlank(mf.getValue('latex'))) return;
             const at = pos();
             if (at === undefined || editor.isDestroyed) return;
             const here = editor.state.doc.nodeAt(at);
@@ -191,8 +233,8 @@ function makeNode(name: 'mathInline' | 'mathBlock', display: boolean) {
           if (at === undefined) return;
           const { state, view } = editor;
           const latex = mf.getValue('latex').trim();
-          // An empty formula disappears when you leave it.
-          if (!latex) {
+          // An empty formula (or only spaces) disappears when you leave it.
+          if (isBlank(latex)) {
             view.dispatch(state.tr.delete(at, at + current.nodeSize));
             view.focus();
             return;
@@ -216,16 +258,82 @@ function makeNode(name: 'mathInline' | 'mathBlock', display: boolean) {
           e.preventDefault();
           leave((e as CustomEvent<{ direction: string }>).detail.direction !== 'backward');
         });
+        // Enter made a new formula line at `at`: focus it as soon as MathLive has
+        // it ready (a moment later), then give it what you typed meanwhile.
+        const moveToNewLine = (at: number) => {
+          // Keys left over from a quick Enter-Enter go on into this new line.
+          const mine = { keys: carry ?? [] };
+          carry = null;
+          handoff = mine;
+          const started = Date.now();
+          const tryFocus = () => {
+            if (handoff !== mine) return;
+            const dom = editor.view.nodeDOM(at);
+            const next = dom instanceof HTMLElement ? (dom.querySelector('math-field') as MathfieldElement | null) : null;
+            // Focused for real only when MathLive's own key input inside it has
+            // the focus (the element can look focused a moment before that).
+            const ready = () => document.activeElement === next && !!next?.shadowRoot?.activeElement;
+            if (next && !ready()) next.focus();
+            // Ready, or waited long enough: either way nothing typed gets lost.
+            const late = Date.now() - started > 1000;
+            if (next && (ready() || late)) {
+              handoff = null;
+              replay(next, mine.keys);
+            } else if (late) handoff = null;
+            else setTimeout(tryFocus, 20);
+          };
+          tryFocus();
+        };
+        // Type the kept keys into the new line; an Enter among them does what
+        // Enter does there, and the rest follows (next line, or the text).
+        const replay = (next: MathfieldElement, keys: string[]) => {
+          const cut = keys.indexOf('\n');
+          const line = (cut < 0 ? keys : keys.slice(0, cut)).join('');
+          if (line) typeInto(next, line); // spaces stay gaps
+          if (cut < 0) return;
+          const rest = keys.slice(cut + 1);
+          carry = rest;
+          next.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true, composed: true }));
+          if (carry === null) return; // a new line took them
+          carry = null;
+          // Enter took a suggestion: still in this line.
+          if (document.activeElement === next) return replay(next, rest);
+          const text = rest.filter((k) => k !== '\n').join('');
+          if (text) editor.commands.insertContent(text);
+        };
         // Before MathLive sees the key (capture): with empty boxes left in a matrix
         // it swallowed the first Esc, so you kept typing inside the matrix.
         // The suggestion list (registered earlier) still gets Esc/Enter first.
         mf.addEventListener(
           'keydown',
           (e) => {
-            if (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey)) {
+            if (handoff || e.isComposing) return;
+            if (e.key === 'Escape') {
               e.preventDefault();
               e.stopImmediatePropagation();
               leave(true);
+            } else if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+              e.preventDefault();
+              e.stopImmediatePropagation();
+              // Enter: the next line of the calculation, a new formula below.
+              // Enter on an empty formula (or only words) goes back to the text.
+              const latex = mf.getValue('latex').trim();
+              const at = pos();
+              if (at === undefined) return;
+              // An empty formula line: the text goes on right here, below the
+              // formulas above (not back up where the formulas started).
+              if (isBlank(latex) && display) {
+                const { state, view } = editor;
+                const tr = state.tr.replaceWith(at, at + current.nodeSize, state.schema.nodes.paragraph.create());
+                view.dispatch(tr.setSelection(TextSelection.near(tr.doc.resolve(at + 1))));
+                view.focus();
+                return;
+              }
+              if (isBlank(latex) || textOnly(latex) !== null) return leave(true);
+              const $at = editor.state.doc.resolve(at);
+              const below = display ? at + current.nodeSize : $at.after($at.depth);
+              editor.view.dispatch(editor.state.tr.insert(below, editor.state.schema.nodes.mathBlock.create({ latex: '' })));
+              moveToNewLine(below);
             }
           },
           { capture: true },

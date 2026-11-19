@@ -13,6 +13,15 @@ import { hideSuggestionBox, showSuggestionBox } from './suggest-box';
 
 const WORD_BEFORE_CARET = /(?:^|[^\\A-Za-zÄÖÜäöüß])([A-Za-zÄÖÜäöüß]+)$/;
 
+const typers = new WeakMap<MathfieldElement, (text: string) => void>();
+
+/** Type text into a formula as if from the keyboard (spaces become gaps). */
+export function typeInto(mf: MathfieldElement, text: string) {
+  const type = typers.get(mf);
+  if (type) type(text);
+  else mf.executeCommand(['typedText', text]);
+}
+
 export function attachSuggestions(mf: MathfieldElement) {
   let items: Suggestion[] = [];
   let index = 0;
@@ -21,8 +30,6 @@ export function attachSuggestions(mf: MathfieldElement) {
   // Maths ignores spaces, so "x span" would read as one word "xspan". A space
   // typed after a short variable is remembered here as a word boundary.
   let boundary = -1;
-  // A space typed in maths, waiting to see what comes next.
-  let pendingSpace = false;
 
   /** Letters right before the caret, as typed (not part of a \command or text). */
   const currentWord = (): string => {
@@ -81,11 +88,7 @@ export function attachSuggestions(mf: MathfieldElement) {
   function accept() {
     const choice = items[index];
     if (!choice) return;
-    // A space right before the word goes too: "x ⇔ y" not "x  ⇔ y" (signs
-    // bring their own spacing).
-    const start = mf.position - matched;
-    const spaceBefore = start > 0 && /^\\\s*$/.test(mf.getValue(start - 1, start, 'latex'));
-    replaceBeforeCaret(matched + (spaceBefore ? 1 : 0), choice.latex, 'placeholder');
+    replaceBeforeCaret(matched, choice.latex, 'placeholder');
     close();
   }
 
@@ -100,6 +103,8 @@ export function attachSuggestions(mf: MathfieldElement) {
   mf.addEventListener(
     'keydown',
     (e) => {
+      // Confirming a candidate of a Japanese/Chinese input with Space or Enter.
+      if (e.isComposing) return;
       const k = e.key;
       const stop = () => {
         e.preventDefault();
@@ -123,34 +128,46 @@ export function attachSuggestions(mf: MathfieldElement) {
           return;
         }
       }
-      if (k === ' ' && !e.ctrlKey && !e.metaKey) {
-        const word = currentWord();
-        if (word.length >= 3) {
-          stop();
-          wordToText(word);
-        } else if (mf.mode === 'math') {
-          // Maths ignores the space bar. Remember it and put in a visible space
-          // only if a number, letter or bracket follows ("1 2", "x y"); before
-          // = + ⇔ … the sign brings its own spacing (no double gaps).
-          stop();
-          pendingSpace = true;
-          boundary = mf.position; // the next letters start a new word: "x span"
-        }
-        return;
-      }
-      if (pendingSpace) {
-        pendingSpace = false;
-        // Right after = + − < ⇔ ≤ … the sign already has its spacing.
-        const prev = mf.getValue(Math.max(0, mf.position - 1), mf.position, 'latex').trim();
-        const afterSign = /^[=+\-<>*/]$|^\\(Leftrightarrow|Rightarrow|Leftarrow|leftrightarrow|rightarrow|leftarrow|to|le|leq|ge|geq|ne|neq|approx|equiv|in|notin|subseteq|subset|supseteq|cup|cap|cdot|times|pm|mp|div|land|lor|mid|sim|cong|coloneq)\b/.test(prev);
-        if (!afterSign && k.length === 1 && /[\p{L}\p{N}(\[|]/u.test(k) && !e.ctrlKey && !e.metaKey && mf.mode === 'math') {
-          mf.insert('\\ ', { mode: 'math', format: 'latex', focus: true });
-          boundary = mf.position;
-        }
-      }
+      if (k === ' ' && !e.ctrlKey && !e.metaKey && space()) stop();
     },
     { capture: true },
   );
+  // The iPad keyboard (and pasting, dictation …) sends text without key
+  // presses: give its spaces the same meaning as the space bar.
+  mf.addEventListener(
+    'beforeinput',
+    (e) => {
+      // Only real typing: MathLive's own inserts announce themselves the same way.
+      // The iPad sends a no-break space (U+00A0) for the space bar.
+      const data = (e as InputEvent).data?.replace(/ /g, ' ');
+      if (!e.isTrusted || (e as InputEvent).inputType !== 'insertText' || !data?.includes(' ') || mf.mode !== 'math') return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      typeText(data);
+    },
+    { capture: true },
+  );
+  typers.set(mf, typeText);
+
+  /** Text as if typed, with spaces as the space bar. */
+  function typeText(text: string) {
+    for (const ch of text) if (ch !== ' ' || !space()) mf.executeCommand(['typedText', ch]);
+  }
+
+  /** The space bar in a formula. True when it was dealt with here. */
+  function space(): boolean {
+    const word = currentWord();
+    if (word.length >= 3) {
+      wordToText(word);
+      return true;
+    }
+    if (mf.mode !== 'math') return false;
+    // Maths ignores the space bar; here every press is a visible gap, also
+    // before and after = + ⇔ … ("a = 0", "1 2" in a matrix).
+    mf.insert('\\ ', { mode: 'math', format: 'latex', focus: true });
+    boundary = mf.position; // the next letters start a new word: "x span"
+    return true;
+  }
   // Typing changes the word; moving the caret or leaving closes the list.
   let typing = false;
   mf.addEventListener('input', () => {

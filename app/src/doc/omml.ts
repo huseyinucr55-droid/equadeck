@@ -138,7 +138,16 @@ function node(el: Element): string {
 
 /** OMML for one formula: <m:oMath> (in the text) or <m:oMathPara> (own line). */
 export function latexToOmml(latex: string, display: boolean): string {
-  const mathml = convertLatexToMathMl(latex.replace(/\\placeholder\{\}/g, ''));
+  const mathml = convertLatexToMathMl(latex.replace(/\\placeholder\{\}/g, ''))
+    // A space ("\ ") comes as a bare &nbsp;, which XML doesn't know (the whole
+    // formula then came out as LaTeX code in Word): make it a real space.
+    .replace(/&nbsp;/g, '<mspace width="0.3em"/>')
+    // Other HTML names (&InvisibleTimes; …) as the characters they stand for.
+    .replace(/&(?!amp;|lt;|gt;|quot;|apos;|#)([a-zA-Z]+);/g, (m, name: string) => {
+      const t = document.createElement('textarea');
+      t.innerHTML = `&${name};`;
+      return t.value === m ? '' : t.value;
+    });
   const doc = new DOMParser().parseFromString(`<math xmlns="http://www.w3.org/1998/Math/MathML">${mathml}</math>`, 'application/xml');
   const body = doc.querySelector('parsererror') ? run(latex) : node(doc.documentElement);
   const math = `<m:oMath xmlns:m="${NS}">${body}</m:oMath>`;

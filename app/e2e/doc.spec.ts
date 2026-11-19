@@ -216,6 +216,7 @@ test.describe('Document view', () => {
         content: [
           { type: 'paragraph', content: [{ type: 'text', text: 'Es gilt ' }, { type: 'mathInline', attrs: { latex: 'a^2+b^2=c^2' } }] },
           { type: 'mathBlock', attrs: { latex: '\\sum_{k=1}^{n}\\frac{1}{k^2}' } },
+          { type: 'mathBlock', attrs: { latex: 'a\\ =\\ 0,\\ b' } },
           { type: 'pageBreak' },
           { type: 'paragraph', content: [{ type: 'text', text: 'Seite zwei' }] },
         ],
@@ -224,7 +225,7 @@ test.describe('Document view', () => {
       localStorage.setItem('lx.docs.current', 'w');
     });
     await page.goto('/doc');
-    await expect(page.locator('.doc-math math-field')).toHaveCount(2);
+    await expect(page.locator('.doc-math math-field')).toHaveCount(3);
     await expect(page.getByText('of 2')).toBeVisible();
     await expect(page.locator('.doc-page')).toHaveCount(2);
     await tab(page, 'File').click();
@@ -235,6 +236,11 @@ test.describe('Document view', () => {
     const { readFileSync } = await import('node:fs');
     const bytes = readFileSync((await file.path())!);
     expect(bytes.subarray(0, 2).toString()).toBe('PK'); // a zip, as .docx files are
+    // Formulas are Word formulas, also with spaces in them (not LaTeX code).
+    const { unzipSync, strFromU8 } = await import('fflate');
+    const xml = strFromU8(unzipSync(new Uint8Array(bytes))['word/document.xml']);
+    expect(xml).toContain('<m:oMath');
+    expect(xml).not.toContain('\\ =');
     await expect(page.getByText('Saved for Word')).toBeVisible();
   });
 
@@ -571,12 +577,12 @@ test.describe('Document view', () => {
     expect((await fields(page))[0]).toMatch(/\\ a$/);
   });
 
-  test('DOC-28 spaces in formulas without double gaps; one Esc leaves a matrix', async ({ page }) => {
+  test('DOC-28 every space is a gap in a formula, also around signs; one Esc leaves a matrix', async ({ page }) => {
     await openDoc(page);
     await startFormula(page);
-    await page.keyboard.type('a = 0 ,  b = 1');
+    await page.keyboard.type('a = 0, b = 1');
     await page.keyboard.press('Escape');
-    expect((await fields(page))[0]).toBe('a=0,\\ b=1');
+    expect((await fields(page))[0]).toBe('a\\ =\\ 0,\\ b\\ =\\ 1');
     await page.keyboard.type(' ');
     await tab(page, 'Insert').click();
     await page.getByRole('group', { name: 'Matrix' }).getByRole('button', { name: 'Matrix' }).click();
@@ -588,6 +594,29 @@ test.describe('Document view', () => {
     await page.keyboard.type(' Ende');
     await expect(body(page)).toContainText('Ende');
     expect((await fields(page))[1]).toContain('1\\ 2');
+  });
+
+  test('DOC-29 Enter in a formula starts the next formula line; Enter on an empty one goes back to text', async ({ page }) => {
+    await openDoc(page);
+    await startFormula(page);
+    await page.keyboard.type('x=1');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('y=2');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('Text danach');
+    await expect(body(page)).toContainText('Text danach');
+    expect(await fields(page)).toEqual(['x=1', 'y=2']);
+    await expect(page.locator('.doc-math-block')).toHaveCount(1);
+    // A line with only spaces counts as empty: Enter goes back to the text, and it is gone.
+    await page.keyboard.type(' ');
+    await page.keyboard.press('Alt+Equal');
+    await expect(page.locator('.doc-math math-field').last()).toBeFocused();
+    await page.keyboard.type('  ');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('Schluss');
+    await expect(body(page)).toContainText('Schluss');
+    expect(await fields(page)).toEqual(['x=1', 'y=2']);
   });
 
   test('DOC-15 tables: insert, add a row, delete', async ({ page }) => {
