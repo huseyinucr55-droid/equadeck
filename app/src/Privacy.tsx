@@ -17,7 +17,7 @@ export default function Privacy() {
       <a href={to('/')} className="text-sm text-accent underline">{de ? '← Zurück zum Editor' : '← Back to the editor'}</a>
       <h1 className="mt-6 text-xl font-bold">{t('Privacy')}</h1>
       <p className="mt-4 text-muted">
-        {de ? 'Zuletzt aktualisiert am 12. November 2026. Entwurf, keine Rechtsberatung.' : 'Last updated 12 November 2026. Draft, not legal advice.'}
+        {de ? 'Zuletzt aktualisiert am 23. November 2026. Entwurf, keine Rechtsberatung.' : 'Last updated 23 November 2026. Draft, not legal advice.'}
       </p>
       {de ? (
         <div className="mt-6 space-y-4">
@@ -40,6 +40,12 @@ export default function Privacy() {
               Datenschutzerklärung von GitHub
             </a>
             . Diese Protokolle erhalten wir nicht.
+          </p>
+          <p>
+            <strong>Spracheingabe</strong> (nur im Dokument und nur, wenn du sie einschaltest): Dein Browser wandelt deine Sprache in Text um und
+            kann die Aufnahme dafür an seinen Hersteller senden, zum Beispiel Chrome an Google und Safari an Apple. Dafür gelten deren
+            Datenschutzregeln. Wir bekommen und speichern keine Aufnahme. Der Browser hört zu, solange unten auf der Seite das Mikrofon-Feld zu
+            sehen ist; nach einer Minute ohne Sprache schaltet es sich ab. Dass du zugestimmt hast, merkt sich nur dieser Browser.
           </p>
           <h2 className="pt-2 text-lg font-semibold">Was wir nicht tun</h2>
           <p>
@@ -67,6 +73,12 @@ export default function Privacy() {
               GitHub privacy statement
             </a>
             . We don't receive those logs.
+          </p>
+          <p>
+            <strong>Voice input</strong> (only in the document, and only if you switch it on): your browser turns your speech into text and may
+            send the sound to its maker for this, for example Chrome to Google and Safari to Apple. Their privacy rules apply. We neither get
+            nor store any sound. The browser listens while the microphone bar shows at the bottom of the page; it switches off after a minute
+            without speech. Only this browser remembers that you agreed.
           </p>
           <h2 className="pt-2 text-lg font-semibold">What we don't do</h2>
           <p>There are no accounts, no cookies, no analytics, no ads and no tracking. If that ever changes, this page will say so first.</p>

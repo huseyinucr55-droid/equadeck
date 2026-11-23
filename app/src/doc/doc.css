@@ -411,6 +411,34 @@ button.doc-link { border: 0; background: none; font: inherit; cursor: pointer; }
   .doc-math math-field { background: none !important; outline: none !important; }
 }
 
+/* --- Voice input ------------------------------------------------------------ */
+.doc-voice-btn[aria-pressed='true'] { background: var(--lx-color-accent-soft); color: var(--lx-color-accent); }
+.doc-voice {
+  position: fixed;
+  z-index: 40;
+  left: 50%;
+  bottom: 3rem;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: max-content;
+  max-width: calc(100vw - 2rem);
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--lx-color-border);
+  border-radius: 10px;
+  background: var(--lx-color-bg);
+  color: var(--lx-color-text);
+  font-size: 0.875rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+.doc-voice-live { color: var(--lx-color-accent); }
+.doc-voice-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-voice-where { flex-shrink: 0; font-size: 0.75rem; }
+.doc-voice .doc-link { flex-shrink: 0; }
+@media (max-width: 640px) { .doc-voice-where { display: none; } }
+@media print { .doc-voice { display: none; } }
+
 /* --- Status bar ------------------------------------------------------------ */
 .doc-statusbar {
   display: flex;

@@ -14,6 +14,7 @@ import { setTextSuggestions, textSuggestionsOn } from './text-suggest';
 import { autoMathOn, setAutoMath } from './auto-math';
 import { layout, onPageCount, repaginate } from './pagination';
 import { Ribbon } from './Ribbon';
+import { VoiceInput } from './VoiceInput';
 import { StatusBar } from './StatusBar';
 import { MARGIN_MM, backupFile, loadCurrentId, loadDocs, mergeDocs, newDoc, readBackup, saveCurrentId, saveDocs, type Doc } from './store';
 import './doc.css';
@@ -251,6 +252,7 @@ export default function DocApp() {
           {notice || (saved ? <><Check aria-hidden className="size-3.5" /> {t('Saved in this browser')}</> : t('Saving…'))}
         </span>
         <nav aria-label={t('Main')} className="ml-auto flex items-center gap-2">
+          <VoiceInput editor={editor} docId={currentId} say={say} />
           <button type="button" className="doc-link" aria-label={t('Keyboard shortcuts (F1)')} title={t('Keyboard shortcuts (F1)')} onClick={() => setHelpOpen(true)}>
             <Keyboard aria-hidden className="size-4" />
           </button>
@@ -409,6 +411,9 @@ const HELP: [string, string][] = [
   ['Ctrl+B / I / U', 'bold, italic, underline'],
   ['Ctrl+Z / Ctrl+Y', 'undo, redo'],
   ['Ctrl+P', 'print or save as PDF'],
+  ['F8', 'voice input on or off'],
+  ['Say: formula …', 'a formula, e.g. “formula x squared plus one”; “end” closes a long fraction or root'],
+  ['Say: new line, undo', 'also: formula, end formula, stop dictation'],
 ];
 
 /** An empty formula you never filled in isn't saved (it would come back after a reload). */

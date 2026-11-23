@@ -13,6 +13,13 @@ import { hideSuggestionBox, showSuggestionBox } from './suggest-box';
 
 const WORD_BEFORE_CARET = /(?:^|[^\\A-Za-zÄÖÜäöüß])([A-Za-zÄÖÜäöüß]+)$/;
 
+const closers = new WeakMap<MathfieldElement, () => void>();
+
+/** Close the formula's suggestion list, if it is open. */
+export function closeSuggestions(mf: MathfieldElement) {
+  closers.get(mf)?.();
+}
+
 const typers = new WeakMap<MathfieldElement, (text: string) => void>();
 
 /** Type text into a formula as if from the keyboard (spaces become gaps). */
@@ -148,6 +155,7 @@ export function attachSuggestions(mf: MathfieldElement) {
     { capture: true },
   );
   typers.set(mf, typeText);
+  closers.set(mf, close);
 
   /** Text as if typed, with spaces as the space bar. */
   function typeText(text: string) {
